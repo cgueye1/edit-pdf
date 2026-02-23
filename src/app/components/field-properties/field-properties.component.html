@@ -1,0 +1,196 @@
+<div *ngIf="field && editedField" class="properties-panel">
+  <h3 class="panel-title">Propriétés du champ</h3>
+
+  <div class="properties-content">
+    <!-- Type de champ -->
+    <div class="property-group">
+      <label class="property-label">Type</label>
+      <select
+        [(ngModel)]="editedField.type"
+        (change)="onFieldTypeChange(editedField.type)"
+        class="property-input property-select">
+        <option *ngFor="let type of fieldTypes" [value]="type">
+          {{ type }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Label -->
+    <div class="property-group" *ngIf="editedField.type === 'input' || editedField.type === 'textarea'">
+      <label class="property-label">Label</label>
+      <input
+        type="text"
+        [(ngModel)]="editedField.label"
+        (blur)="updateField()"
+        class="property-input"
+        placeholder="Nom du champ">
+    </div>
+
+    <!-- Placeholder -->
+    <div class="property-group" *ngIf="editedField.type === 'input' || editedField.type === 'textarea'">
+      <label class="property-label">Placeholder</label>
+      <input
+        type="text"
+        [(ngModel)]="editedField.placeholder"
+        (blur)="updateField()"
+        class="property-input"
+        placeholder="Texte d'aide">
+    </div>
+
+    <!-- Valeur (pour texte) -->
+    <div class="property-group" *ngIf="editedField.type === 'text'">
+      <label class="property-label">Valeur</label>
+      <input
+        type="text"
+        [(ngModel)]="editedField.value"
+        (blur)="updateField()"
+        class="property-input"
+        placeholder="Texte">
+    </div>
+
+    <!-- Required -->
+    <div class="property-group property-checkbox" *ngIf="editedField.type === 'input' || editedField.type === 'textarea'">
+      <input
+        type="checkbox"
+        [checked]="editedField.required"
+        (change)="onRequiredChange($any($event.target).checked)"
+        class="checkbox-input"
+        id="required-checkbox">
+      <label for="required-checkbox" class="checkbox-label">Champ obligatoire</label>
+    </div>
+
+    <!-- Position et taille -->
+    <div class="property-group">
+      <label class="property-label">Position et taille</label>
+      <div class="grid-2">
+        <div>
+          <label class="property-sublabel">X</label>
+          <input
+            type="number"
+            [(ngModel)]="editedField.x"
+            (blur)="updateField()"
+            class="property-input property-input-small"
+            step="0.1">
+        </div>
+        <div>
+          <label class="property-sublabel">Y</label>
+          <input
+            type="number"
+            [(ngModel)]="editedField.y"
+            (blur)="updateField()"
+            class="property-input property-input-small"
+            step="0.1">
+        </div>
+        <div>
+          <label class="property-sublabel">Largeur</label>
+          <input
+            type="number"
+            [(ngModel)]="editedField.width"
+            (blur)="updateField()"
+            class="property-input property-input-small"
+            step="0.1">
+        </div>
+        <div>
+          <label class="property-sublabel">Hauteur</label>
+          <input
+            type="number"
+            [(ngModel)]="editedField.height"
+            (blur)="updateField()"
+            class="property-input property-input-small"
+            step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Taille de police (pour texte et checkbox) -->
+    <div class="property-group" *ngIf="editedField.type === 'text' || editedField.type === 'checkbox'">
+      <label class="property-label">Taille de police</label>
+      <input
+        type="number"
+        [(ngModel)]="editedField.fontSize"
+        (blur)="updateField()"
+        class="property-input"
+        min="8"
+        max="72"
+        [placeholder]="editedField.type === 'checkbox' ? '20' : '14'">
+    </div>
+
+    <!-- Couleur (pour texte) -->
+    <div class="property-group" *ngIf="editedField.type === 'text'">
+      <label class="property-label">Couleur</label>
+      <input
+        type="color"
+        [(ngModel)]="editedField.color"
+        (change)="updateField()"
+        class="property-input property-color">
+    </div>
+
+    <!-- Validation (pour les champs texte) -->
+    <div class="property-group" *ngIf="editedField && (editedField.type === 'text' || editedField.type === 'textarea' || editedField.type === 'input')">
+      <label class="property-label">Validation</label>
+      <div class="grid-2">
+        <div>
+          <label class="property-sublabel">Longueur min</label>
+          <input
+            type="number"
+            [ngModel]="editedField.validation?.minLength"
+            (ngModelChange)="onMinLengthChange($event)"
+            class="property-input property-input-small"
+            min="0">
+        </div>
+        <div>
+          <label class="property-sublabel">Longueur max</label>
+          <input
+            type="number"
+            [ngModel]="editedField.validation?.maxLength"
+            (ngModelChange)="onMaxLengthChange($event)"
+            class="property-input property-input-small"
+            min="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation (pour les champs nombre) -->
+    <div class="property-group" *ngIf="editedField && editedField.type === 'number'">
+      <label class="property-label">Validation</label>
+      <div class="grid-2">
+        <div>
+          <label class="property-sublabel">Min</label>
+          <input
+            type="number"
+            [ngModel]="editedField.validation?.min"
+            (ngModelChange)="onMinChange($event)"
+            class="property-input property-input-small">
+        </div>
+        <div>
+          <label class="property-sublabel">Max</label>
+          <input
+            type="number"
+            [ngModel]="editedField.validation?.max"
+            (ngModelChange)="onMaxChange($event)"
+            class="property-input property-input-small">
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton supprimer -->
+    <div class="property-actions">
+      <button
+        (click)="deleteField()"
+        class="btn-delete">
+        <i class="fas fa-trash-alt"></i>
+        Supprimer le champ
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!field" class="properties-panel-empty">
+  <div class="empty-message">
+    <i class="fas fa-mouse-pointer"></i>
+    <p>Sélectionnez un champ pour modifier ses propriétés</p>
+  </div>
+</div>
+
+
+

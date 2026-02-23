@@ -3,61 +3,161 @@
   
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Signature</h3>
+      <div class="header-title">
+        <i class="fas fa-file-signature header-icon"></i>
+        <h3>Créer une signature</h3>
+      </div>
       <button class="close-btn" (click)="close()">
         <i class="fas fa-times"></i>
       </button>
     </div>
 
+    <div class="modal-tabs">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'image'"
+        (click)="switchTab('image')">
+        Image
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'type'"
+        (click)="switchTab('type')">
+        Taper
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'write'"
+        (click)="switchTab('write')">
+        Écrire
+      </button>
+    </div>
+
     <div class="modal-body">
-      <div class="canvas-container">
-        <canvas 
-          #canvas 
-          class="signature-canvas"
-          (touchmove)="$event.preventDefault()">
-        </canvas>
+      <!-- Dernière signature -->
+      <div *ngIf="lastSignature" class="last-signature-section">
+        <div class="last-signature-header">
+          <span>Dernière signature utilisée</span>
+          <button class="btn-use-last" (click)="useLastSignature()">
+            <i class="fas fa-check"></i> Utiliser
+          </button>
+        </div>
+        <div class="last-signature-preview">
+          <img [src]="lastSignature" alt="Dernière signature">
+        </div>
       </div>
 
-      <div class="signature-controls">
-        <div class="control-group">
-          <label>Couleur:</label>
-          <div class="color-options">
-            <button 
-              *ngFor="let color of ['#000000', '#FF0000', '#0000FF', '#008000']"
-              class="color-btn" 
-              [style.background]="color"
-              [class.active]="penColor === color"
-              (click)="changePenColor(color)">
+      <!-- Onglet Image -->
+      <div *ngIf="activeTab === 'image'" class="tab-content">
+        <div 
+          class="image-upload-area"
+          (drop)="onDrop($event)"
+          (dragover)="onDragOver($event)"
+          (click)="openFileDialog()">
+          <input 
+            #fileInput
+            type="file" 
+            accept="image/*" 
+            (change)="onFileSelected($event)"
+            style="display: none;">
+          
+          <div *ngIf="!uploadedImageUrl" class="upload-placeholder">
+            <i class="fas fa-plus upload-icon"></i>
+            <p>Ajouter une image</p>
+          </div>
+          
+          <div *ngIf="uploadedImageUrl" class="uploaded-image-preview">
+            <img [src]="uploadedImageUrl" alt="Signature">
+            <button class="remove-image-btn" (click)="uploadedImageUrl = null; $event.stopPropagation()">
+              <i class="fas fa-times"></i>
             </button>
           </div>
         </div>
 
-        <div class="control-group">
-          <label>Épaisseur:</label>
+        <div class="remove-background-option">
           <input 
-            type="range" 
-            min="1" 
-            max="5" 
-            step="0.5"
-            [value]="penWidth"
-            (input)="changePenWidth($any($event.target).value)"
-            class="width-slider">
-          <span class="width-value">{{ penWidth }}px</span>
+            type="checkbox" 
+            id="removeBackground"
+            [(ngModel)]="removeBackground">
+          <label for="removeBackground">Supprimer l'arrière-plan</label>
+          <i class="fas fa-question-circle help-icon" title="Supprime automatiquement l'arrière-plan de l'image"></i>
+        </div>
+      </div>
+
+      <!-- Onglet Taper -->
+      <div *ngIf="activeTab === 'type'" class="tab-content">
+        <div class="type-signature-container">
+          <input 
+            type="text" 
+            class="signature-input"
+            [(ngModel)]="typedSignature"
+            placeholder="Tapez votre signature"
+            maxlength="50">
+        </div>
+      </div>
+
+      <!-- Onglet Écrire -->
+      <div *ngIf="activeTab === 'write'" class="tab-content">
+        <div class="canvas-container">
+          <canvas 
+            #canvas 
+            class="signature-canvas"
+            (touchmove)="$event.preventDefault()">
+          </canvas>
+        </div>
+
+        <div class="signature-controls">
+          <div class="control-group">
+            <label>Couleur:</label>
+            <div class="color-options">
+              <button 
+                *ngFor="let color of ['#000000', '#FF0000', '#0000FF', '#008000']"
+                class="color-btn" 
+                [style.background]="color"
+                [class.active]="penColor === color"
+                (click)="changePenColor(color)">
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label>Épaisseur:</label>
+            <input 
+              type="range" 
+              min="1" 
+              max="5" 
+              step="0.5"
+              [value]="penWidth"
+              (input)="changePenWidth($any($event.target).value)"
+              class="width-slider">
+            <span class="width-value">{{ penWidth }}px</span>
+          </div>
+
+          <div class="control-group">
+            <button class="btn-control" (click)="undo()">
+              <i class="fas fa-undo"></i> Annuler
+            </button>
+            <button class="btn-control" (click)="clear()">
+              <i class="fas fa-eraser"></i> Effacer
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="clear()">
-        <i class="fas fa-eraser"></i> Effacer
+      <button class="btn btn-secondary btn-encrypt" (click)="cancel()">
+        <i class="fas fa-lock"></i> Cryptage avec certificat
       </button>
-      
-      <button class="btn btn-secondary" (click)="undo()">
-        <i class="fas fa-undo"></i> Annuler
+      <button class="btn btn-secondary" (click)="cancel()">
+        Annuler
       </button>
-      
-      <button class="btn btn-primary" (click)="save()">
-        <i class="fas fa-check"></i> Enregistrer
+      <button 
+        class="btn btn-primary" 
+        [class.disabled]="!canSave()"
+        [disabled]="!canSave()"
+        (click)="save()">
+        OK
       </button>
     </div>
   </div>

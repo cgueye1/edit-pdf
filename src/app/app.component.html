@@ -1,110 +1,188 @@
 <div class="app-container">
-  <!-- En-tête -->
-  <header class="app-header">
-    <div class="header-left">
-      <h1>
-        <i class="fas fa-file-pdf text-danger"></i>
-        PDF Editor Advanced
-      </h1>
-      <div class="document-info" *ngIf="pdfFile">
-        <span class="document-name">{{ currentDocument.name }}</span>
-        <span class="document-stats">
-          <i class="fas fa-layer-group"></i>
-          {{ currentDocument.fields.length }} éléments
-        </span>
+  <!-- En-tête avec toolbar -->
+  <header class="app-header-wrapper">
+    <div class="app-header">
+      <div class="header-left">
+        <h1>
+          <i class="fas fa-file-pdf text-danger"></i>
+          PDF Editor Advanced
+        </h1>
+        <div class="document-info" *ngIf="pdfFile">
+          <span class="document-name">{{ currentDocument.name }}</span>
+          <span class="document-stats">
+            <i class="fas fa-layer-group"></i>
+            {{ currentDocument.fields.length }} éléments
+          </span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="file-upload">
+          <input type="file" id="pdfInput" accept=".pdf" (change)="onFileSelected($event)" hidden>
+          <label for="pdfInput" class="btn-upload">
+            <i class="fas fa-upload"></i>
+            Charger un PDF
+          </label>
+          <span *ngIf="pdfFile" class="file-name">
+            {{ pdfFile.name }}
+          </span>
+        </div>
       </div>
     </div>
 
-    <div class="header-right">
-      <div class="file-upload">
-        <input 
-          type="file" 
-          id="pdfInput" 
-          accept=".pdf"
-          (change)="onFileSelected($event)"
-          hidden>
-        <label for="pdfInput" class="btn-upload">
-          <i class="fas fa-upload"></i>
-          Charger un PDF
-        </label>
-        <span *ngIf="pdfFile" class="file-name">
-          {{ pdfFile.name }}
-        </span>
-      </div>
-    </div>
+    <!-- Barre d'outils principale -->
+    <app-pdf-toolbar [canUndo]="canUndo" [canRedo]="canRedo" [totalPages]="totalPages"
+      [currentPage]="currentDocument.currentPage" [showTextProperties]="activeTool === 'text'"
+      [textProperties]="textProperties" (toolSelected)="onToolSelected($event)" (undo)="onUndo()" (redo)="onRedo()"
+      (export)="onExport()" (preview)="onPreview()" (save)="onSave()" (load)="onLoad()" (clear)="onClear()"
+      (pageChange)="onPageChange($event)" (textPropertiesChange)="onTextPropertiesChange($event)"
+      (toggleProperties)="showProperties = !showProperties">
+    </app-pdf-toolbar>
   </header>
-
-  <!-- Barre d'outils principale -->
-  <app-pdf-toolbar
-    [canUndo]="canUndo"
-    [canRedo]="canRedo"
-    [totalPages]="totalPages"
-    [currentPage]="currentDocument.currentPage"
-    [showTextProperties]="activeTool === 'text'"
-    [textProperties]="textProperties"
-    (toolSelected)="onToolSelected($event)"
-    (undo)="onUndo()"
-    (redo)="onRedo()"
-    (export)="onExport()"
-    (save)="onSave()"
-    (load)="onLoad()"
-    (clear)="onClear()"
-    (pageChange)="onPageChange($event)"
-    (textPropertiesChange)="onTextPropertiesChange($event)">
-  </app-pdf-toolbar>
 
   <!-- Zone de contenu principale -->
   <main class="app-main">
-    <!-- Viewer PDF -->
-    <div class="pdf-viewer-wrapper" *ngIf="pdfUrl">
-      <app-pdf-viewer
-        [pdfUrl]="pdfUrl"
-        [currentPage]="currentDocument.currentPage"
-        [fields]="currentDocument.fields"
-        [scale]="scale"
-        [activeTool]="activeTool"
-        (pageClick)="onPageClick($event)"
-        (fieldAdded)="onFieldUpdated($event)"
-        (fieldUpdated)="onFieldUpdated($event)"
-        (fieldSelected)="onFieldSelected($event)"
-        (pageRendered)="onPageRendered($event)">
-      </app-pdf-viewer>
-    </div>
+    <div class="main-content-wrapper">
+      <aside class="thumbnails-sidebar"
+             [hidden]="!showThumbnails"
+             [class.collapsed]="sidebarCollapsed"
+             [class.mobile-visible]="isOpen && isMobile">
 
-    <!-- État vide -->
-    <div class="empty-state" *ngIf="!pdfUrl">
-      <div class="empty-content">
-        <i class="fas fa-file-pdf"></i>
-        <h2>Aucun PDF chargé</h2>
-        <p>Chargez un fichier PDF pour commencer l'édition</p>
-        <div class="file-upload-large">
-          <input 
-            type="file" 
-            id="pdfInputLarge" 
-            accept=".pdf"
-            (change)="onFileSelected($event)"
-            hidden>
-          <label for="pdfInputLarge" class="btn-upload-large">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <span>Choisir un fichier PDF</span>
-            <small>ou glissez-déposez ici</small>
-          </label>
+        <!-- Barre supérieure fixe -->
+        <div class="sidebar-top-bar">
+          <!-- Flèche pour fermer -->
+          <button class="close-btn" (click)="closeSidebar()" [title]="sidebarCollapsed ? 'Ouvrir les pages' : 'Fermer les pages'">
+            <i class="fas" [class.fa-arrow-left]="!sidebarCollapsed" [class.fa-arrow-right]="sidebarCollapsed"></i>
+          </button>
+
+          <h3 class="sidebar-title">Pages</h3>
+
+          <!-- Icône ⋮ (menu ou options) -->
+          <button class="menu-btn">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
         </div>
+
+        <!-- Zone scrollable avec scrollbar fine -->
+        <div class="thumbnails-scroll-wrapper">
+          <div class="thumbnails-scroll-container">
+            <div class="thumbnails-list">
+              <div *ngFor="let pageNum of pages; let i = index"
+                   class="thumbnail-item"
+                   [class.active]="currentDocument.currentPage === pageNum"
+                   (click)="selectPage(pageNum)">
+
+                <div class="thumbnail-preview">
+                  <canvas #thumbCanvas class="thumbnail-canvas"></canvas>
+                </div>
+
+                <div class="page-number">Page {{ pageNum }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Bouton pour ouvrir le sidebar quand il est caché -->
+      <button class="sidebar-toggle-btn"
+              *ngIf="showThumbnails && sidebarCollapsed"
+              (click)="closeSidebar()"
+              title="Afficher les pages">
+        <i class="fas fa-book-open"></i>
+      </button>
+      <!-- Viewer PDF -->
+      <div class="pdf-viewer-wrapper" *ngIf="pdfUrl">
+        <!-- Barre de contrôle du document -->
+        <div class="document-controls">
+          <div class="page-stepper">
+            <button class="control-btn" (click)="currentDocument.currentPage = currentDocument.currentPage - 1" [disabled]="currentDocument.currentPage === 1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <path fill="currentColor" fill-rule="evenodd" d="M12.53 10.53a.75.75 0 0 1-1.06 0L8 7.06l-3.47 3.47a.75.75 0 0 1-1.06-1.06l4-4a.75.75 0 0 1 1.06 0l4 4a.75.75 0 0 1 0 1.06" clip-rule="evenodd"></path>
+              </svg>
+            </button>
+            <span class="page-text">{{currentDocument.currentPage}} / {{totalPages}}</span>
+            <button class="control-btn" (click)="currentDocument.currentPage = currentDocument.currentPage + 1" [disabled]="currentDocument.currentPage === totalPages">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <path fill="currentColor" fill-rule="evenodd" d="M3.47 5.47a.75.75 0 0 1 1.06 0L8 8.94l3.47-3.47a.75.75 0 1 1 1.06 1.06l-4 4a.75.75 0 0 1-1.06 0l-4-4a.75.75 0 0 1 0-1.06" clip-rule="evenodd"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="divider-vertical"></div>
+          <div class="zoom-controls">
+            <button class="control-btn" (click)="zoomOut()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <rect width="13" height="2" x="1.5" y="7" fill="currentColor" rx="1"></rect>
+              </svg>
+            </button>
+            <span class="zoom-text">{{Math.round(scale * 100)}}%</span>
+            <button class="control-btn" (click)="zoomIn()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                <path fill="currentColor" d="M13 6.907H9V2.534C9 1.93 8.552 1.44 8 1.44s-1 .49-1 1.094v4.373H3c-.552 0-1 .49-1 1.093 0 .604.448 1.093 1 1.093h4v4.374c0 .604.448 1.093 1 1.093s1-.489 1-1.094V9.093h4c.553 0 1-.49 1-1.093s-.447-1.093-1-1.093"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="divider-vertical"></div>
+          <button class="fit-btn" (click)="fitToScreen()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+              <path fill="currentColor" d="M14.667 1.294H1.333C.598 1.294 0 1.977 0 2.816v10.956c0 .84.598 1.522 1.333 1.522h13.334c.735 0 1.333-.683 1.333-1.522V2.816c0-.84-.598-1.522-1.333-1.522m.267 12.478c0 .168-.12.304-.267.304H1.333c-.147 0-.266-.136-.266-.304V2.816c0-.168.119-.305.266-.305h13.334c.147 0 .267.137.267.305z"></path>
+              <path fill="currentColor" d="M14.11 8.125q-.007-.031-.018-.063-.011-.03-.026-.057-.01-.024-.023-.047a.6.6 0 0 0-.066-.094L12.69 6.397a.488.488 0 0 0-.754 0 .67.67 0 0 0 0 .86l.375.43h-1.285c-.294 0-.533.272-.533.608s.24.609.533.609h1.285l-.376.429a.67.67 0 0 0 0 .86.5.5 0 0 0 .377.179.5.5 0 0 0 .377-.179l1.286-1.467a.6.6 0 0 0 .067-.093q.012-.023.022-.047.016-.029.027-.058t.017-.063l.014-.05a.7.7 0 0 0 0-.24q-.006-.025-.014-.05M4.973 7.687H3.688l.375-.43a.67.67 0 0 0 0-.86.488.488 0 0 0-.754 0L2.023 7.864a.6.6 0 0 0-.066.094q-.013.022-.022.046-.016.029-.027.058t-.017.063q-.007.025-.013.051a.7.7 0 0 0 0 .239q.006.025.013.051.007.032.017.062t.027.059q.01.023.022.046.03.051.066.093l1.286 1.468a.5.5 0 0 0 .377.178.5.5 0 0 0 .377-.178.67.67 0 0 0 0-.861l-.375-.429h1.284c.295 0 .533-.272.533-.608s-.238-.61-.532-.61"></path>
+            </svg>
+            <span>Fit</span>
+          </button>
+        </div>
+        <!-- Bouton toggle mode remplissage -->
+        <div class="fill-mode-toggle">
+        </div>
+        <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
+          [scale]="scale" [activeTool]="activeTool" (pageClick)="onPageClick($event)"
+          (fieldAdded)="onFieldUpdated($event)" (fieldUpdated)="onFieldUpdated($event)"
+          (fieldSelected)="onFieldSelected($event)" (fieldTextEdit)="onFieldTextEdit($event)"
+          (pageRendered)="onPageRendered($event)">
+        </app-pdf-viewer>
+      </div>
+
+      <!-- État vide -->
+      <div class="empty-state" *ngIf="!pdfUrl">
+        <div class="empty-content">
+          <i class="fas fa-file-pdf"></i>
+          <h2>Créez ou éditez votre PDF</h2>
+          <p>Commencez par créer un nouveau PDF ou chargez un fichier existant</p>
+
+          <div class="action-buttons">
+            <button class="btn-create" (click)="createBlankPdf()" title="Créer un nouveau PDF vierge">
+              <i class="fas fa-plus-circle"></i>
+              <span>Créer un nouveau PDF</span>
+            </button>
+
+            <div class="divider">OU</div>
+
+            <div class="file-upload-large">
+              <input type="file" id="pdfInputLarge" accept=".pdf" (change)="onFileSelected($event)" hidden>
+              <label for="pdfInputLarge" class="btn-upload-large">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Charger un PDF existant</span>
+                <small>ou glissez-déposez ici</small>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panneau de propriétés -->
+      <div class="properties-panel-wrapper" *ngIf="pdfUrl && showProperties">
+        <app-field-properties [field]="selectedField" (fieldUpdated)="onFieldPropertiesUpdated($event)">
+        </app-field-properties>
       </div>
     </div>
   </main>
 
   <!-- Panneau de signature -->
-  <app-signature-pad
-    *ngIf="showSignaturePad"
-    (signatureSaved)="onSignatureSaved($event)"
+  <app-signature-pad *ngIf="showSignaturePad" (signatureSaved)="onSignatureSaved($event)"
     (closed)="onCloseSignaturePad()">
   </app-signature-pad>
 
   <!-- Panneau des documents sauvegardés -->
-  <app-saved-documents
-    [show]="showSavedDocuments"
-    (closed)="onCloseSavedDocuments()"
+  <app-saved-documents [show]="showSavedDocuments" (closed)="onCloseSavedDocuments()"
     (documentSelected)="loadSavedDocument($event)">
   </app-saved-documents>
 

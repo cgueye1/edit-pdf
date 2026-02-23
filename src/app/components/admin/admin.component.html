@@ -1,0 +1,190 @@
+<div class="admin-container">
+  <!-- En-tête -->
+  <header class="admin-header">
+    <div class="header-content">
+      <h1>
+        <i class="fas fa-cog"></i>
+        Administration des Formulaires
+      </h1>
+      <p class="subtitle">Gérez vos templates de formulaires PDF</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <i class="fas fa-plus"></i>
+        Nouveau Template
+      </button>
+      <a routerLink="/forms" class="btn btn-secondary">
+        <i class="fas fa-eye"></i>
+        Voir les Formulaires
+      </a>
+      <a routerLink="/editor" class="btn btn-outline">
+        <i class="fas fa-edit"></i>
+        Éditeur PDF
+      </a>
+    </div>
+  </header>
+
+  <!-- Filtres et recherche -->
+  <div class="filters-section">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="text"
+        placeholder="Rechercher un template..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchChange()"
+        class="search-input"
+      />
+    </div>
+    <div class="category-filter">
+      <label>
+        <i class="fas fa-filter"></i>
+        Catégorie:
+      </label>
+      <select [(ngModel)]="selectedCategory" (change)="onCategoryChange()" class="category-select">
+        <option value="all">Toutes les catégories</option>
+        <option *ngFor="let cat of categories" [value]="cat.id">
+          {{ cat.name }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Liste des templates -->
+  <div class="templates-grid" *ngIf="filteredTemplates.length > 0">
+    <div
+      *ngFor="let template of filteredTemplates"
+      class="template-card"
+      [style.border-left-color]="getCategoryColor(template.category || 'other')"
+    >
+      <div class="template-header">
+        <div class="template-category">
+          <i [class]="'fas ' + getCategoryIcon(template.category || 'other')"></i>
+          <span>{{ getCategoryName(template.category || 'other') }}</span>
+        </div>
+        <div class="template-actions">
+          <button
+            class="btn-icon"
+            (click)="editTemplate(template)"
+            title="Éditer"
+          >
+            <i class="fas fa-edit"></i>
+          </button>
+          <button
+            class="btn-icon"
+            (click)="duplicateTemplate(template)"
+            title="Dupliquer"
+          >
+            <i class="fas fa-copy"></i>
+          </button>
+          <button
+            class="btn-icon btn-danger"
+            (click)="deleteTemplate(template)"
+            title="Supprimer"
+          >
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="template-body" (click)="editTemplate(template)">
+        <h3 class="template-name">{{ template.name }}</h3>
+        <p class="template-description" *ngIf="template.description">
+          {{ template.description }}
+        </p>
+        <div class="template-stats">
+          <span class="stat">
+            <i class="fas fa-layer-group"></i>
+            {{ template.fields.length }} champs
+          </span>
+          <span class="stat">
+            <i class="fas fa-file-alt"></i>
+            {{ getSubmissionsCount(template.id) }} soumissions
+          </span>
+          <span class="stat">
+            <i class="fas fa-clock"></i>
+            {{ template.metadata.updatedAt | date: 'short' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- État vide -->
+  <div class="empty-state" *ngIf="filteredTemplates.length === 0">
+    <i class="fas fa-file-alt"></i>
+    <h2>Aucun template trouvé</h2>
+    <p *ngIf="searchQuery || selectedCategory !== 'all'">
+      Aucun template ne correspond à vos critères de recherche.
+    </p>
+    <p *ngIf="!searchQuery && selectedCategory === 'all'">
+      Commencez par créer votre premier template de formulaire.
+    </p>
+    <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="!searchQuery && selectedCategory === 'all'">
+      <i class="fas fa-plus"></i>
+      Créer un Template
+    </button>
+  </div>
+
+  <!-- Modal de création -->
+  <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Créer un nouveau template</h2>
+        <button class="btn-close" (click)="closeCreateModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nom du template *</label>
+          <input
+            type="text"
+            [(ngModel)]="newTemplateName"
+            placeholder="Ex: Demande de virement bancaire"
+            class="form-control"
+          />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea
+            [(ngModel)]="newTemplateDescription"
+            placeholder="Description du formulaire..."
+            class="form-control"
+            rows="3"
+          ></textarea>
+        </div>
+        <div class="form-group">
+          <label>Catégorie</label>
+          <select [(ngModel)]="newTemplateCategory" class="form-control">
+            <option value="">Sélectionner une catégorie</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeCreateModal()">
+          Annuler
+        </button>
+        <button class="btn btn-primary" (click)="createNewTemplate()">
+          <i class="fas fa-arrow-right"></i>
+          Créer et Éditer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+

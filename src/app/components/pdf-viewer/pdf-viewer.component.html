@@ -7,66 +7,143 @@
 
   <!-- Conteneur PDF -->
   <div #pdfContainer class="pdf-container">
-    <canvas 
-      #pdfCanvas
-      class="pdf-canvas"
-      (click)="onCanvasClick($event)"
-      [class.select-mode]="activeTool === 'select'"
-      [class.text-mode]="activeTool === 'text'"
-      [class.checkbox-mode]="activeTool === 'checkbox'">
+    <canvas #pdfCanvas class="pdf-canvas" (click)="onCanvasClick($event)" [class.has-active-tool]="activeTool">
     </canvas>
 
     <!-- Champs superposés -->
     <div class="fields-layer">
-      <div 
-        *ngFor="let field of getFieldsForCurrentPage()"
-        class="field-container"
-        [ngStyle]="getFieldStyle(field)"
-        [appDraggable]="activeTool === 'select'"
-        [dragData]="field"
-        (dragStart)="onFieldSelected(field)"
-        (dragEnd)="onFieldDragEnd($event)"
-        (click)="onFieldSelected(field)"
-        [class.selected]="selectedField?.id === field.id">
+      <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" [attr.data-field-id]="field.id"
+        [ngStyle]="getFieldStyle(field)" [appDraggable]="activeTool === 'select' || !activeTool" [dragData]="field"
+        (dragStart)="onFieldDragStart(field, $event)" (dragging)="onFieldDragging($event)"
+        (dragEnd)="onFieldDragEnd($event)" [appResizable]="selectedField?.id === field.id" [resizeData]="field"
+        [minWidth]="field.type === 'checkbox' ? 15 : 50" [minHeight]="field.type === 'checkbox' ? 15 : 30" (resizeStart)="onFieldResizeStart(field)" (resizing)="onFieldResizing($event)"
+        (resizeEnd)="onFieldResizeEnd($event)" (click)="onFieldContainerClick(field, $event)"
+        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id">
 
         <!-- Texte -->
         <div *ngIf="field.type === 'text'" class="text-field">
-          {{ field.value }}
-          <div class="field-handle" *ngIf="selectedField?.id === field.id">
-            <i class="fas fa-arrows-alt"></i>
+          <div *ngIf="editingField?.id !== field.id" (click)="startEditingField(field)" class="text-display"
+            [class.empty]="!field.value">
+            <span *ngIf="field.value">{{ field.value }}</span>
+            <span *ngIf="!field.value" class="placeholder">Cliquez pour éditer</span>
           </div>
+          <input *ngIf="editingField?.id === field.id" [id]="'text-edit-' + field.id" type="text"
+            [value]="field.value || ''" 
+            [style.fontSize]="(field.fontSize || 14) + 'px'"
+            [style.color]="field.color || '#000000'"
+            [style.fontFamily]="field.fontFamily || 'Helvetica'"
+            [style.fontWeight]="field.bold ? 'bold' : 'normal'"
+            [style.fontStyle]="field.italic ? 'italic' : 'normal'"
+            [style.textDecoration]="field.underline ? 'underline' : 'none'"
+            (blur)="onTextEditBlur(field, $any($event.target).value)"
+            (keydown)="onTextEditKeydown(field, $event, $any($event.target).value)"
+            (input)="onTextInput(field, $any($event.target).value)" class="text-edit-input"
+            (click)="$event.stopPropagation()" autocomplete="off">
         </div>
 
         <!-- Case à cocher -->
-        <div *ngIf="field.type === 'checkbox'" class="checkbox-field">
-          <div class="checkbox-box" [class.checked]="field.value">
-            <i *ngIf="field.value" class="fas fa-check"></i>
+        <div *ngIf="field.type === 'checkbox'" class="checkbox-field" (click)="onFieldSelected(field, $event)"
+          [style.fontSize]="(field.fontSize || 10) + 'px'">
+          <i *ngIf="field.value === true" class="fas fa-check checkbox-icon"></i>
+          <i *ngIf="field.value === 'cross'" class="fas fa-times checkbox-icon"></i>
+        </div>
+
+        <!-- Input field -->
+        <div *ngIf="field.type === 'input'" class="input-field">
+          <div class="input-box" (click)="startEditingField(field)" [class.editing]="editingField?.id === field.id">
+            <input *ngIf="editingField?.id === field.id" [id]="'input-edit-' + field.id" type="text"
+              [value]="field.value || ''" (blur)="onInputEditBlur(field, $any($event.target).value)"
+              (keydown)="onInputEditKeydown(field, $event)"
+              (input)="onInputValueChange(field, $any($event.target).value)" class="input-edit"
+              (click)="$event.stopPropagation()" [placeholder]="field.placeholder || 'Tapez ici...'">
+            <span *ngIf="editingField?.id !== field.id && field.value" class="input-value">
+              {{ field.value }}
+            </span>
+            <span *ngIf="editingField?.id !== field.id && !field.value" class="input-placeholder">
+              {{ field.placeholder || 'Cliquez pour éditer' }}
+            </span>
           </div>
-          <div class="field-handle" *ngIf="selectedField?.id === field.id">
-            <i class="fas fa-arrows-alt"></i>
+        </div>
+
+        <!-- Textarea field -->
+        <div *ngIf="field.type === 'textarea'" class="textarea-field">
+          <div class="textarea-box" (click)="startEditingField(field)" [class.editing]="editingField?.id === field.id">
+            <textarea *ngIf="editingField?.id === field.id" [id]="'textarea-edit-' + field.id"
+              [value]="field.value || ''" (blur)="onTextareaEditBlur(field, $any($event.target).value)"
+              (keydown)="onTextareaEditKeydown(field, $event)"
+              (input)="onTextareaValueChange(field, $any($event.target).value)" class="textarea-edit"
+              (click)="$event.stopPropagation()" [placeholder]="field.placeholder || 'Tapez ici...'"
+              rows="4"></textarea>
+            <div *ngIf="editingField?.id !== field.id && field.value" class="textarea-value">
+              {{ field.value }}
+            </div>
+            <div *ngIf="editingField?.id !== field.id && !field.value" class="textarea-placeholder">
+              {{ field.placeholder || 'Cliquez pour éditer' }}
+            </div>
           </div>
+        </div>
+
+        <!-- Image -->
+        <div *ngIf="field.type === 'image'" class="image-field">
+          <img [src]="field.value" [alt]="'Image ' + field.id">
         </div>
 
         <!-- Signature -->
         <div *ngIf="field.type === 'signature'" class="signature-field">
           <img [src]="field.value" [alt]="'Signature ' + field.id">
-          <div class="field-handle" *ngIf="selectedField?.id === field.id">
-            <i class="fas fa-arrows-alt"></i>
-          </div>
         </div>
+
+        <!-- Date field -->
+        <div *ngIf="field.type === 'date'" class="date-field">
+          <div *ngIf="editingField?.id !== field.id" (click)="startEditingField(field)" class="date-display"
+            [class.empty]="!field.value">
+            <span *ngIf="field.value">{{ field.value }}</span>
+            <span *ngIf="!field.value" class="placeholder">Date</span>
+          </div>
+          <input *ngIf="editingField?.id === field.id" [id]="'date-edit-' + field.id" type="date"
+            [value]="field.value || ''" 
+            [style.fontSize]="(field.fontSize || 14) + 'px'"
+            [style.color]="field.color || '#000000'"
+            [style.fontFamily]="field.fontFamily || 'Helvetica'"
+            [style.fontWeight]="field.bold ? 'bold' : 'normal'"
+            [style.fontStyle]="field.italic ? 'italic' : 'normal'"
+            [style.textDecoration]="field.underline ? 'underline' : 'none'"
+            (blur)="onDateEditBlur(field, $any($event.target).value)"
+            (keydown)="onDateEditKeydown(field, $event)" class="date-edit-input"
+            (click)="$event.stopPropagation()" autocomplete="off">
+        </div>
+
+        <!-- Bouton de suppression -->
+        <button *ngIf="selectedField?.id === field.id && !editingField" class="delete-btn"
+          (click)="deleteSelectedField(); $event.stopPropagation()" title="Supprimer (Delete)">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     </div>
 
-    <!-- Indicateur de mode actif -->
-    <div *ngIf="activeTool" class="active-tool-indicator">
-      <div *ngIf="activeTool === 'text'" class="indicator-text">
-        <i class="fas fa-mouse-pointer"></i> Cliquez pour ajouter du texte
-      </div>
-      <div *ngIf="activeTool === 'checkbox'" class="indicator-text">
-        <i class="fas fa-mouse-pointer"></i> Cliquez pour ajouter une case
-      </div>
-      <div *ngIf="activeTool === 'select'" class="indicator-text">
-        <i class="fas fa-arrows-alt"></i> Glissez-déposez pour déplacer
+    <!-- Indicateur d'outil actif -->
+    <div *ngIf="activeTool" class="tool-indicator">
+      <div class="indicator-content">
+        <i class="fas" [ngClass]="{
+          'fa-font': activeTool === 'text',
+          'fa-check-square': activeTool === 'checkbox',
+          'fa-i-cursor': activeTool === 'input',
+          'fa-align-left': activeTool === 'textarea',
+          'fa-image': activeTool === 'image',
+          'fa-pen-fancy': activeTool === 'signature',
+          'fa-calendar-alt': activeTool === 'date',
+          'fa-mouse-pointer': activeTool === 'select'
+        }"></i>
+        <span>
+          {{ activeTool === 'text' ? 'Cliquez pour ajouter du texte' :
+          activeTool === 'checkbox' ? 'Cliquez pour ajouter une case' :
+          activeTool === 'input' ? 'Cliquez pour ajouter un champ' :
+          activeTool === 'textarea' ? 'Cliquez pour ajouter une zone de texte' :
+          activeTool === 'image' ? 'Cliquez pour ajouter une image' :
+          activeTool === 'signature' ? 'Cliquez pour ajouter une signature' :
+          activeTool === 'date' ? 'Cliquez pour ajouter la date' :
+          activeTool === 'select' ? 'Mode sélection' : '' }}
+        </span>
       </div>
     </div>
   </div>

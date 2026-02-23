@@ -1,0 +1,144 @@
+.thumbnails-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 900;
+
+  &.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+
+  &.mobile-visible {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 85vw;
+    max-width: 340px;
+    transform: translateX(0);
+    z-index: 1050;
+  }
+}
+
+/* Barre du haut fixe */
+.sidebar-top-bar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  flex-shrink: 0;
+
+  .close-btn, .menu-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: #495057;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(0,0,0,0.07);
+    }
+  }
+
+  .sidebar-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+  }
+}
+
+/* Zone scrollable avec scrollbar fine */
+.thumbnails-scroll-wrapper {
+  flex: 1;
+  overflow: hidden;
+}
+
+.thumbnails-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 12px;
+  padding-right: 10px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(140, 140, 140, 0.4) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 6px 0;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(140, 140, 140, 0.5);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.8);
+  }
+}
+
+/* Miniatures */
+.thumbnails-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.thumbnail-item {
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: scale(1.03);
+  }
+
+  &.active {
+    .thumbnail-preview {
+      border: 2px solid #0d6efd;
+      box-shadow: 0 0 0 4px rgba(13,110,253,0.2);
+    }
+  }
+
+  .thumbnail-preview {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .thumbnail-canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .page-number {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #6c757d;
+  }
+}

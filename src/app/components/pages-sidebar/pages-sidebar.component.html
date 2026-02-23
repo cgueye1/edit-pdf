@@ -1,0 +1,38 @@
+<aside class="thumbnails-sidebar"
+       [class.collapsed]="!isOpen"
+       [class.mobile-visible]="isOpen && isMobile">
+
+  <!-- Barre supérieure fixe -->
+  <div class="sidebar-top-bar">
+    <!-- Flèche pour fermer -->
+    <button class="close-btn" (click)="closeSidebar()" title="Fermer les pages">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+
+    <h3 class="sidebar-title">Pages</h3>
+
+    <!-- Icône ⋮ (menu ou options) -->
+    <button class="menu-btn">
+      <i class="fas fa-ellipsis-v"></i>
+    </button>
+  </div>
+
+  <!-- Zone scrollable avec scrollbar fine -->
+  <div class="thumbnails-scroll-wrapper">
+    <div class="thumbnails-scroll-container">
+      <div class="thumbnails-list">
+        <div *ngFor="let pageNum of pages; let i = index"
+             class="thumbnail-item"
+             [class.active]="currentPage === pageNum"
+             (click)="selectPage(pageNum)">
+
+          <div class="thumbnail-preview">
+            <canvas #thumbCanvas class="thumbnail-canvas"></canvas>
+          </div>
+
+          <div class="page-number">Page {{ pageNum }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>

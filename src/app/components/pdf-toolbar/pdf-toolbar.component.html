@@ -1,35 +1,71 @@
 <div class="toolbar">
   <div class="toolbar-section">
     <div class="tool-group">
-      <button 
-        class="tool-btn" 
+      <button
+        class="tool-btn"
         [class.active]="activeTool === 'text'"
         (click)="selectTool('text')"
-        title="Ajouter du texte">
-        <i class="fas fa-font"></i>
-        <span class="tool-label">Texte</span>
+        title="Machine à écrire - Cliquez n'importe où sur le PDF pour ajouter du texte">
+        <i class="fas fa-keyboard"></i>
+        <span class="tool-label">Machine à écrire</span>
       </button>
-      
-      <button 
-        class="tool-btn" 
+
+      <button
+        class="tool-btn"
         [class.active]="activeTool === 'checkbox'"
         (click)="selectTool('checkbox')"
         title="Ajouter une case à cocher">
         <i class="far fa-square"></i>
         <span class="tool-label">Case</span>
       </button>
-      
-      <button 
-        class="tool-btn" 
+
+<!--      <button-->
+<!--        class="tool-btn"-->
+<!--        [class.active]="activeTool === 'input'"-->
+<!--        (click)="selectTool('input')"-->
+<!--        title="Ajouter un champ input (avec pointillés)">-->
+<!--        <i class="fas fa-i-cursor"></i>-->
+<!--        <span class="tool-label">Input</span>-->
+<!--      </button>-->
+
+<!--      <button-->
+<!--        class="tool-btn"-->
+<!--        [class.active]="activeTool === 'textarea'"-->
+<!--        (click)="selectTool('textarea')"-->
+<!--        title="Ajouter une zone de texte (avec pointillés)">-->
+<!--        <i class="fas fa-align-left"></i>-->
+<!--        <span class="tool-label">Zone texte</span>-->
+<!--      </button>-->
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'image'"
+        (click)="selectTool('image')"
+        title="Ajouter une image">
+        <i class="fas fa-image"></i>
+        <span class="tool-label">Image</span>
+      </button>
+
+      <button
+        class="tool-btn"
         [class.active]="activeTool === 'signature'"
         (click)="selectTool('signature')"
         title="Ajouter une signature">
         <i class="fas fa-signature"></i>
         <span class="tool-label">Signature</span>
       </button>
-      
-      <button 
-        class="tool-btn" 
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'date'"
+        (click)="selectTool('date')"
+        title="Ajouter la date d'aujourd'hui">
+        <i class="fas fa-calendar-alt"></i>
+        <span class="tool-label">Date</span>
+      </button>
+
+      <button
+        class="tool-btn"
         [class.active]="activeTool === 'select'"
         (click)="selectTool('select')"
         title="Sélectionner et déplacer">
@@ -38,47 +74,127 @@
       </button>
     </div>
 
-    <div class="tool-group" *ngIf="activeTool === 'text' && showTextProperties">
-      <div class="property-control">
-        <label>Taille:</label>
-        <input 
-          type="number" 
+    <!-- Barre d'outils contextuelle pour le texte -->
+    <div class="text-toolbar" *ngIf="activeTool === 'text' && showTextProperties">
+      <!-- Police -->
+      <div class="toolbar-group">
+        <select
+          class="toolbar-select"
+          [value]="textProperties.fontFamily"
+          (change)="onFontFamilyChange($event)"
+          title="Police">
+          <option *ngFor="let font of fontFamilies" [value]="font">{{ font }}</option>
+        </select>
+      </div>
+
+      <!-- Taille de police -->
+      <div class="toolbar-group">
+        <select
+          class="toolbar-select toolbar-select-small"
           [value]="textProperties.fontSize"
           (change)="onFontSizeChange($event)"
-          min="8" 
-          max="72"
-          class="property-input">
+          title="Taille">
+          <option *ngFor="let size of fontSizes" [value]="size">{{ size }}</option>
+        </select>
       </div>
-      
-      <div class="property-control">
-        <label>Couleur:</label>
-        <input 
-          type="color" 
-          [value]="textProperties.color"
-          (change)="onColorChange($event)"
-          class="property-input color-input">
+
+      <!-- Style de texte -->
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn"
+          [class.active]="textProperties.bold"
+          (click)="onBoldToggle()"
+          title="Gras">
+          <i class="fas fa-bold"></i>
+        </button>
+        <button
+          class="toolbar-btn"
+          [class.active]="textProperties.italic"
+          (click)="onItalicToggle()"
+          title="Italique">
+          <i class="fas fa-italic"></i>
+        </button>
+        <button
+          class="toolbar-btn"
+          [class.active]="textProperties.underline"
+          (click)="onUnderlineToggle()"
+          title="Souligné">
+          <i class="fas fa-underline"></i>
+        </button>
+      </div>
+
+      <!-- Couleur du texte -->
+      <div class="toolbar-group">
+        <div class="color-picker-wrapper">
+          <input
+            type="color"
+            [value]="textProperties.color"
+            (change)="onColorChange($event)"
+            class="color-picker"
+            title="Couleur du texte">
+          <div class="color-preview" [style.background-color]="textProperties.color"></div>
+        </div>
+      </div>
+
+      <!-- Couleur de fond -->
+      <div class="toolbar-group">
+        <div class="color-picker-wrapper">
+          <input
+            type="color"
+            [value]="textProperties.backgroundColor === 'transparent' ? '#ffffff' : textProperties.backgroundColor"
+            (change)="onBackgroundColorChange($event)"
+            class="color-picker"
+            title="Couleur de fond">
+          <div class="color-preview"
+               [style.background-color]="textProperties.backgroundColor === 'transparent' ? 'transparent' : textProperties.backgroundColor"
+               [class.transparent]="textProperties.backgroundColor === 'transparent'">
+            <i class="fas fa-ban" *ngIf="textProperties.backgroundColor === 'transparent'"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alignement horizontal -->
+      <div class="toolbar-group">
+        <button
+          *ngFor="let align of textAlignments"
+          class="toolbar-btn"
+          [class.active]="textProperties.textAlign === align.value"
+          (click)="onTextAlignChange(align.value)"
+          [title]="align.label">
+          <i class="fas fa-{{ align.icon }}"></i>
+        </button>
+      </div>
+
+      <!-- Alignement vertical -->
+      <div class="toolbar-group">
+        <button
+          *ngFor="let align of verticalAlignments"
+          class="toolbar-btn"
+          [class.active]="textProperties.verticalAlign === align.value"
+          (click)="onVerticalAlignChange(align.value)"
+          [title]="align.label">
+          <i class="fas fa-{{ align.icon }}"></i>
+        </button>
       </div>
     </div>
   </div>
 
   <div class="toolbar-section">
     <div class="tool-group">
-      <button 
-        class="tool-btn" 
+      <button
+        class="tool-btn"
         [class.disabled]="!canUndo"
         (click)="onUndo()"
         [title]="canUndo ? 'Annuler' : 'Rien à annuler'">
         <i class="fas fa-undo"></i>
-        <span class="tool-label">Annuler</span>
       </button>
-      
-      <button 
-        class="tool-btn" 
+
+      <button
+        class="tool-btn"
         [class.disabled]="!canRedo"
         (click)="onRedo()"
         [title]="canRedo ? 'Rétablir' : 'Rien à rétablir'">
         <i class="fas fa-redo"></i>
-        <span class="tool-label">Rétablir</span>
       </button>
     </div>
   </div>
@@ -86,21 +202,21 @@
   <div class="toolbar-section">
     <div class="tool-group">
       <div class="page-controls" *ngIf="totalPages > 0">
-        <button 
-          class="page-btn" 
+        <button
+          class="page-btn"
           (click)="previousPage()"
           [disabled]="currentPage === 1">
           <i class="fas fa-chevron-left"></i>
         </button>
-        
+
         <div class="page-info">
           <span class="current-page">{{ currentPage }}</span>
           <span class="page-separator">/</span>
           <span class="total-pages">{{ totalPages }}</span>
         </div>
-        
-        <button 
-          class="page-btn" 
+
+        <button
+          class="page-btn"
           (click)="nextPage()"
           [disabled]="currentPage === totalPages">
           <i class="fas fa-chevron-right"></i>
@@ -113,22 +229,26 @@
     <div class="tool-group">
       <button class="tool-btn btn-save" (click)="onSave()" title="Sauvegarder">
         <i class="fas fa-save"></i>
-        <span class="tool-label">Sauvegarder</span>
       </button>
-      
+
       <button class="tool-btn btn-load" (click)="onLoad()" title="Charger">
         <i class="fas fa-folder-open"></i>
-        <span class="tool-label">Charger</span>
       </button>
-      
+
+      <button class="tool-btn btn-preview" (click)="onPreview()" title="Aperçu PDF">
+        <i class="fas fa-eye"></i>
+      </button>
+
       <button class="tool-btn btn-export" (click)="onExport()" title="Exporter PDF">
         <i class="fas fa-download"></i>
-        <span class="tool-label">Exporter</span>
       </button>
-      
+
       <button class="tool-btn btn-clear" (click)="onClear()" title="Tout effacer">
         <i class="fas fa-trash-alt"></i>
-        <span class="tool-label">Effacer</span>
+      </button>
+      
+      <button class="tool-btn btn-more-tools" (click)="onToggleProperties()" title="More tools">
+        <i class="fas fa-ellipsis-v"></i>
       </button>
     </div>
   </div>

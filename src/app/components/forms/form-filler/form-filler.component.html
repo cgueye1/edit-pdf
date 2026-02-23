@@ -1,0 +1,176 @@
+<div class="form-filler-container" *ngIf="template">
+  <!-- En-tête -->
+  <header class="filler-header">
+    <div class="header-left">
+      <button class="btn-back" (click)="router.navigate(['/forms'])">
+        <i class="fas fa-arrow-left"></i>
+        Retour
+      </button>
+      <div class="form-info">
+        <h1>{{ template.name }}</h1>
+        <p *ngIf="template.description">{{ template.description }}</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-secondary" (click)="saveDraft()">
+        <i class="fas fa-save"></i>
+        Sauvegarder le brouillon
+      </button>
+      <button class="btn btn-primary" (click)="submitForm()" [disabled]="isSubmitting">
+        <i class="fas fa-paper-plane"></i>
+        {{ isSubmitting ? 'Soumission...' : 'Soumettre' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="filler-content">
+    <!-- Formulaire -->
+    <div class="form-section">
+      <div class="form-fields">
+        <div
+          *ngFor="let field of template.fields"
+          class="field-group"
+          [class.has-error]="hasError(field.id)"
+        >
+          <label class="field-label">
+            {{ field.displayName || field.label || field.name }}
+            <span class="required" *ngIf="field.validation.required">*</span>
+          </label>
+
+          <p class="field-description" *ngIf="field.description">
+            {{ field.description }}
+          </p>
+
+          <!-- Champ texte / input -->
+          <input
+            *ngIf="field.type === 'input' || field.type === 'text'"
+            type="text"
+            [(ngModel)]="fieldValues[field.id]"
+            (ngModelChange)="onFieldChange(field.id, $event)"
+            [placeholder]="field.placeholder || ''"
+            class="form-control"
+            [class.error]="hasError(field.id)"
+          />
+
+          <!-- Champ email -->
+          <input
+            *ngIf="field.type === 'email'"
+            type="email"
+            [(ngModel)]="fieldValues[field.id]"
+            (ngModelChange)="onFieldChange(field.id, $event)"
+            [placeholder]="field.placeholder || ''"
+            class="form-control"
+            [class.error]="hasError(field.id)"
+          />
+
+          <!-- Champ nombre -->
+          <input
+            *ngIf="field.type === 'number'"
+            type="number"
+            [(ngModel)]="fieldValues[field.id]"
+            (ngModelChange)="onFieldChange(field.id, $event)"
+            [placeholder]="field.placeholder || ''"
+            [min]="field.validation.min ?? null"
+            [max]="field.validation.max ?? null"
+            class="form-control"
+            [class.error]="hasError(field.id)"
+          />
+
+          <!-- Champ date -->
+          <input
+            *ngIf="field.type === 'date'"
+            type="date"
+            [(ngModel)]="fieldValues[field.id]"
+            (ngModelChange)="onFieldChange(field.id, $event)"
+            class="form-control"
+            [class.error]="hasError(field.id)"
+          />
+
+          <!-- Textarea -->
+          <textarea
+            *ngIf="field.type === 'textarea'"
+            [(ngModel)]="fieldValues[field.id]"
+            (ngModelChange)="onFieldChange(field.id, $event)"
+            [placeholder]="field.placeholder || ''"
+            [rows]="4"
+            class="form-control"
+            [class.error]="hasError(field.id)"
+          ></textarea>
+
+          <!-- Checkbox -->
+          <label class="checkbox-label" *ngIf="field.type === 'checkbox'">
+            <input
+              type="checkbox"
+              [(ngModel)]="fieldValues[field.id]"
+              (ngModelChange)="onFieldChange(field.id, $event)"
+            />
+            <span>{{ field.placeholder || 'Cocher' }}</span>
+          </label>
+
+          <!-- Upload d'image -->
+          <div *ngIf="field.type === 'image'" class="image-upload">
+            <input
+              type="file"
+              [id]="'image-' + field.id"
+              accept="image/*"
+              (change)="onImageUpload($event, field.id)"
+              hidden
+            />
+            <label [for]="'image-' + field.id" class="btn-upload">
+              <i class="fas fa-upload"></i>
+              {{ fieldValues[field.id] ? 'Changer l\'image' : 'Télécharger une image' }}
+            </label>
+            <img
+              *ngIf="fieldValues[field.id]"
+              [src]="fieldValues[field.id]"
+              class="uploaded-image"
+              alt="Image uploadée"
+            />
+          </div>
+
+          <!-- Signature -->
+          <div *ngIf="field.type === 'signature'" class="signature-section">
+            <canvas
+              [id]="'signature-' + field.id"
+              class="signature-canvas"
+            ></canvas>
+            <div class="signature-actions">
+              <button class="btn btn-small" (click)="clearSignature(field.id)">
+                Effacer
+              </button>
+              <button class="btn btn-small btn-primary" (click)="saveSignature(field.id)">
+                Enregistrer
+              </button>
+            </div>
+          </div>
+
+          <!-- Message d'erreur -->
+          <div class="error-message" *ngIf="hasError(field.id)">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ getFieldError(field.id) }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aperçu PDF -->
+    <div class="preview-section" *ngIf="showPreview && pdfUrl">
+      <div class="preview-header">
+        <h3>Aperçu PDF</h3>
+        <button class="btn btn-small" (click)="downloadPdf()">
+          <i class="fas fa-download"></i>
+          Télécharger
+        </button>
+      </div>
+      <div class="pdf-preview">
+        <iframe [src]="pdfUrl" class="pdf-iframe"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading" *ngIf="!template">
+  <i class="fas fa-spinner fa-spin"></i>
+  <p>Chargement du formulaire...</p>
+</div>
+

@@ -1,0 +1,471 @@
+.signature-pad-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 2001;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .header-icon {
+      color: #dc3545;
+      font-size: 20px;
+    }
+
+    h3 {
+      margin: 0;
+      color: #333;
+      font-size: 18px;
+      font-weight: 500;
+    }
+  }
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8f9fa;
+    color: #333;
+  }
+}
+
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 20px;
+
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+    top: 1px;
+
+    &:hover {
+      color: #333;
+    }
+
+    &.active {
+      color: #dc3545;
+      border-bottom-color: #dc3545;
+      font-weight: 500;
+    }
+  }
+}
+
+.modal-body {
+  padding: 20px;
+  flex: 1;
+  overflow: auto;
+  min-height: 300px;
+}
+
+.tab-content {
+  width: 100%;
+}
+
+// Onglet Image
+.image-upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  &:hover {
+    border-color: #dc3545;
+    background: #f5f5f5;
+  }
+
+  .upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #999;
+
+    .upload-icon {
+      font-size: 48px;
+      color: #ccc;
+    }
+
+    p {
+      margin: 0;
+      font-size: 16px;
+    }
+  }
+
+  .uploaded-image-preview {
+    position: relative;
+    max-width: 100%;
+    max-height: 300px;
+
+    img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 4px;
+    }
+
+    .remove-image-btn {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+
+      &:hover {
+        background: #c82333;
+      }
+    }
+  }
+}
+
+.remove-background-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  label {
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+  }
+
+  .help-icon {
+    color: #999;
+    font-size: 14px;
+    cursor: help;
+  }
+}
+
+// Onglet Taper
+.type-signature-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+
+  .signature-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 16px;
+    font-size: 32px;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Brush Script MT', cursive, sans-serif;
+    color: #333;
+
+    &:focus {
+      outline: none;
+      border-color: #dc3545;
+    }
+
+    &::placeholder {
+      color: #ccc;
+      font-style: italic;
+    }
+  }
+}
+
+// Onglet Écrire
+.canvas-container {
+  border: 2px dashed #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: 
+    repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #ffffff 10px, #ffffff 20px);
+  position: relative;
+}
+
+.signature-canvas {
+  width: 100%;
+  height: 300px;
+  background: transparent;
+  cursor: crosshair;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.signature-controls {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    label {
+      font-size: 14px;
+      color: #495057;
+      font-weight: 500;
+      min-width: 70px;
+    }
+  }
+}
+
+.color-options {
+  display: flex;
+  gap: 8px;
+}
+
+.color-btn {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &.active {
+    border-color: #333;
+    transform: scale(1.1);
+  }
+
+  &:hover:not(.active) {
+    transform: scale(1.05);
+  }
+}
+
+.width-slider {
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: #dee2e6;
+  outline: none;
+  -webkit-appearance: none;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+    border: none;
+  }
+}
+
+.width-value {
+  font-size: 14px;
+  color: #495057;
+  min-width: 40px;
+}
+
+.btn-control {
+  padding: 8px 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+  color: #495057;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+  }
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+
+    &.btn-secondary {
+      background: #6c757d;
+      color: white;
+
+      &:hover {
+        background: #5a6268;
+      }
+
+      &.btn-encrypt {
+        background: #f8f9fa;
+        color: #495057;
+        border: 1px solid #dee2e6;
+
+        &:hover {
+          background: #e9ecef;
+        }
+      }
+    }
+
+    &.btn-primary {
+      background: #dc3545;
+      color: white;
+
+      &:hover:not(.disabled) {
+        background: #c82333;
+      }
+
+      &.disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+  }
+}
+
+
+// Dernière signature
+.last-signature-section {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+
+  .last-signature-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    span {
+      font-size: 13px;
+      font-weight: 500;
+      color: #495057;
+    }
+
+    .btn-use-last {
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #218838;
+      }
+    }
+  }
+
+  .last-signature-preview {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+
+    img {
+      max-width: 100%;
+      max-height: 100px;
+    }
+  }
+}

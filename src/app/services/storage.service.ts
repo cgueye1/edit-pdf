@@ -9,17 +9,19 @@ export class StorageService {
 
   saveDocument(document: PDFDocumentState): void {
     const documents = this.getAllDocuments();
-    
-    // Vérifier si le document existe déjà
     const existingIndex = documents.findIndex(doc => doc.id === document.id);
     
+    const documentToSave = {
+      ...document,
+      originalFile: undefined // Ne pas sauvegarder le PDF
+    };
+    
     if (existingIndex !== -1) {
-      documents[existingIndex] = document;
+      documents[existingIndex] = documentToSave as any;
     } else {
-      documents.push(document);
+      documents.push(documentToSave as any);
     }
 
-    // Limiter à 10 documents sauvegardés
     if (documents.length > 10) {
       documents.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       documents.splice(10);
@@ -34,8 +36,6 @@ export class StorageService {
 
     try {
       const documents = JSON.parse(documentsJson);
-      
-      // Convertir les dates
       return documents.map((doc: any) => ({
         ...doc,
         createdAt: new Date(doc.createdAt),
@@ -53,9 +53,16 @@ export class StorageService {
   }
 
   deleteDocument(id: string): void {
-    const documents = this.getAllDocuments();
-    const filteredDocuments = documents.filter(doc => doc.id !== id);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredDocuments));
+    const documentsJson = localStorage.getItem(this.STORAGE_KEY);
+    if (!documentsJson) return;
+    
+    try {
+      const documents = JSON.parse(documentsJson);
+      const filteredDocuments = documents.filter((doc: any) => doc.id !== id);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredDocuments));
+    } catch (error) {
+      console.error('Erreur lors de la suppression du document:', error);
+    }
   }
 
   clearAll(): void {

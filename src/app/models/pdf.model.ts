@@ -1,6 +1,6 @@
 export interface PDFField {
   id: string;
-  type: 'text' | 'checkbox' | 'signature' | 'image';
+  type: 'text' | 'checkbox' | 'signature' | 'image' | 'input' | 'textarea' | 'date' | 'number' | 'email';
   x: number;
   y: number;
   width: number;
@@ -10,6 +10,22 @@ export interface PDFField {
   rotation?: number;
   fontSize?: number;
   color?: string;
+  fontFamily?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  fillModeOnly?: boolean;
+  validation?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
+    pattern?: string;
+  };
 }
 
 export interface PDFPage {

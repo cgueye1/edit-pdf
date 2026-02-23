@@ -1,0 +1,284 @@
+<div class="template-editor-container">
+    <!-- En-tête -->
+    <header class="editor-header">
+        <div class="header-left">
+            <button class="btn-back" (click)="router.navigate(['/admin'])">
+                <i class="fas fa-arrow-left"></i>
+                Retour
+            </button>
+            <div class="template-info">
+                <input type="text" [(ngModel)]="templateName" placeholder="Nom du template"
+                    class="template-name-input" />
+                <input type="text" [(ngModel)]="templateDescription" placeholder="Description (optionnel)"
+                    class="template-description-input" />
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" (click)="saveTemplate()">
+                <i class="fas fa-save"></i>
+                Sauvegarder
+            </button>
+        </div>
+    </header>
+
+    <div class="editor-content">
+        <!-- Barre d'outils -->
+        <div class="toolbar-section" *ngIf="showToolbar">
+            <div class="toolbar">
+                <h3>Outils</h3>
+                <div class="mode-toggle">
+                    <label class="toggle-switch">
+                        <span class="toggle-wrapper">
+                            <input type="checkbox" [(ngModel)]="typewriterMode" (change)="onModeToggle()">
+                            <span class="toggle-slider"></span>
+                        </span>
+                        <span class="toggle-label">Mode Machine à écrire</span>
+                    </label>
+                </div>
+                <div class="tool-info tool-info-default" *ngIf="typewriterMode">
+                    <i class="fas fa-keyboard"></i>
+                    <span>Cliquez n'importe où sur le PDF pour taper du texte directement</span>
+                </div>
+                <div class="tool-info" *ngIf="!typewriterMode && activeTool === 'select'">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Cliquez sur un champ pour le sélectionner, puis glissez pour le déplacer. Appuyez sur Delete
+                        pour supprimer.</span>
+                </div>
+                <div class="tool-info" *ngIf="!typewriterMode && activeTool && activeTool !== 'select'">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Cliquez sur le PDF pour ajouter un champ {{ getToolName(activeTool) }}</span>
+                </div>
+                <div class="tool-buttons" [class.disabled]="typewriterMode">
+                    <button class="tool-btn tool-btn-primary" [class.active]="activeTool === 'select'"
+                        (click)="onToolSelected('select')" title="Sélectionner et déplacer (ou appuyez sur 'S')">
+                        <i class="fas fa-mouse-pointer"></i>
+                        Sélectionner
+                        <span class="tool-shortcut">S</span>
+                    </button>
+                    <button class="tool-btn" [class.active]="activeTool === 'text'" (click)="onToolSelected('text')"
+                        title="Ajouter du texte (ou appuyez sur 'T')">
+                        <i class="fas fa-font"></i>
+                        Texte
+                        <span class="tool-shortcut">T</span>
+                    </button>
+                    <button class="tool-btn" [class.active]="activeTool === 'input'" (click)="onToolSelected('input')"
+                        title="Champ texte">
+                        <i class="fas fa-i-cursor"></i>
+                        Input
+                    </button>
+                    <button class="tool-btn" [class.active]="activeTool === 'textarea'"
+                        (click)="onToolSelected('textarea')" title="Zone de texte">
+                        <i class="fas fa-align-left"></i>
+                        Textarea
+                    </button>
+                    <button class="tool-btn" [class.active]="activeTool === 'checkbox'"
+                        (click)="onToolSelected('checkbox')" title="Case à cocher">
+                        <i class="fas fa-check-square"></i>
+                        Checkbox
+                    </button>
+                </div>
+                <div class="file-upload-section">
+                    <input type="file" id="pdfUpload" accept=".pdf" (change)="onFileSelected($event)" hidden />
+                    <label for="pdfUpload" class="btn-upload">
+                        <i class="fas fa-upload"></i>
+                        Charger un PDF de base
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone d'édition PDF -->
+        <div class="pdf-editor-section">
+            <!-- Barre de contrôle du document -->
+            <div class="document-controls" *ngIf="pdfUrl">
+                <div class="page-stepper">
+                    <button class="control-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                            <path fill="currentColor" fill-rule="evenodd" d="M12.53 10.53a.75.75 0 0 1-1.06 0L8 7.06l-3.47 3.47a.75.75 0 0 1-1.06-1.06l4-4a.75.75 0 0 1 1.06 0l4 4a.75.75 0 0 1 0 1.06" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <span class="page-text">{{currentPage}} / {{totalPages}}</span>
+                    <button class="control-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                            <path fill="currentColor" fill-rule="evenodd" d="M3.47 5.47a.75.75 0 0 1 1.06 0L8 8.94l3.47-3.47a.75.75 0 1 1 1.06 1.06l-4 4a.75.75 0 0 1-1.06 0l-4-4a.75.75 0 0 1 0-1.06" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="divider"></div>
+                <div class="zoom-controls">
+                    <button class="control-btn" (click)="zoomOut()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                            <rect width="13" height="2" x="1.5" y="7" fill="currentColor" rx="1"></rect>
+                        </svg>
+                    </button>
+                    <span class="zoom-text">{{zoomLevel}}%</span>
+                    <button class="control-btn" (click)="zoomIn()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                            <path fill="currentColor" d="M13 6.907H9V2.534C9 1.93 8.552 1.44 8 1.44s-1 .49-1 1.094v4.373H3c-.552 0-1 .49-1 1.093 0 .604.448 1.093 1 1.093h4v4.374c0 .604.448 1.093 1 1.093s1-.489 1-1.094V9.093h4c.553 0 1-.49 1-1.093s-.447-1.093-1-1.093"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="divider"></div>
+                <button class="fit-btn" (click)="fitToScreen()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
+                        <path fill="currentColor" d="M14.667 1.294H1.333C.598 1.294 0 1.977 0 2.816v10.956c0 .84.598 1.522 1.333 1.522h13.334c.735 0 1.333-.683 1.333-1.522V2.816c0-.84-.598-1.522-1.333-1.522m.267 12.478c0 .168-.12.304-.267.304H1.333c-.147 0-.266-.136-.266-.304V2.816c0-.168.119-.305.266-.305h13.334c.147 0 .267.137.267.305z"></path>
+                        <path fill="currentColor" d="M14.11 8.125q-.007-.031-.018-.063-.011-.03-.026-.057-.01-.024-.023-.047a.6.6 0 0 0-.066-.094L12.69 6.397a.488.488 0 0 0-.754 0 .67.67 0 0 0 0 .86l.375.43h-1.285c-.294 0-.533.272-.533.608s.24.609.533.609h1.285l-.376.429a.67.67 0 0 0 0 .86.5.5 0 0 0 .377.179.5.5 0 0 0 .377-.179l1.286-1.467a.6.6 0 0 0 .067-.093q.012-.023.022-.047.016-.029.027-.058t.017-.063l.014-.05a.7.7 0 0 0 0-.24q-.006-.025-.014-.05M4.973 7.687H3.688l.375-.43a.67.67 0 0 0 0-.86.488.488 0 0 0-.754 0L2.023 7.864a.6.6 0 0 0-.066.094q-.013.022-.022.046-.016.029-.027.058t-.017.063q-.007.025-.013.051a.7.7 0 0 0 0 .239q.006.025.013.051.007.032.017.062t.027.059q.01.023.022.046.03.051.066.093l1.286 1.468a.5.5 0 0 0 .377.178.5.5 0 0 0 .377-.178.67.67 0 0 0 0-.861l-.375-.429h1.284c.295 0 .533-.272.533-.608s-.238-.61-.532-.61"></path>
+                    </svg>
+                    <span>Fit</span>
+                </button>
+            </div>
+            <div class="pdf-viewer-wrapper" *ngIf="pdfUrl">
+                <app-pdf-viewer [pdfUrl]="pdfUrl" [currentPage]="currentPage" [fields]="template?.fields || []"
+                    [scale]="scale" [activeTool]="typewriterMode ? 'text' : (activeTool || 'text')"
+                    (pageClick)="onPageClick($event)" (fieldSelected)="onFieldSelected($event)"
+                    (fieldUpdated)="onFieldMoved($event)" (fieldTextEdit)="onFieldTextEdit($event)">
+                </app-pdf-viewer>
+            </div>
+            <div class="empty-pdf" *ngIf="!pdfUrl">
+                <p>Créez un PDF vierge ou chargez un PDF existant</p>
+                <button class="btn btn-primary" (click)="createBlankPdf()">
+                    Créer un PDF vierge
+                </button>
+            </div>
+        </div>
+
+        <!-- Panneau de propriétés -->
+        <div class="properties-section" *ngIf="showFieldProperties && selectedField">
+            <div class="properties-panel">
+                <div class="panel-header">
+                    <h3>Propriétés du champ</h3>
+                    <button class="btn-close-panel" (click)="closePropertiesPanel()" title="Fermer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Nom du champ *</label>
+                    <input type="text" [(ngModel)]="selectedField.name" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Nom d'affichage</label>
+                    <input type="text" [(ngModel)]="selectedField.displayName" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea [(ngModel)]="selectedField.description" class="form-control" rows="2"
+                        (blur)="onFieldUpdated(selectedField)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Label</label>
+                    <input type="text" [(ngModel)]="selectedField.label" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Placeholder</label>
+                    <input type="text" [(ngModel)]="selectedField.placeholder" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group" *ngIf="selectedField.type === 'checkbox'">
+                    <label>Taille de la case</label>
+                    <input type="number" [(ngModel)]="selectedField.fontSize" class="form-control"
+                        (change)="onFieldUpdated(selectedField)" min="10" max="50" step="1" />
+                    <small>La taille sera appliquée à la largeur et hauteur</small>
+                </div>
+
+                <h4>Position et taille</h4>
+                <div class="position-controls">
+                    <div class="form-group-inline">
+                        <label>X</label>
+                        <input type="number" [(ngModel)]="selectedField.x" class="form-control-small"
+                            (blur)="onFieldUpdated(selectedField)" step="1" />
+                    </div>
+                    <div class="form-group-inline">
+                        <label>Y</label>
+                        <input type="number" [(ngModel)]="selectedField.y" class="form-control-small"
+                            (blur)="onFieldUpdated(selectedField)" step="1" />
+                    </div>
+                    <div class="form-group-inline">
+                        <label>Largeur</label>
+                        <input type="number" [(ngModel)]="selectedField.width" class="form-control-small"
+                            (blur)="onFieldUpdated(selectedField)" step="1" />
+                    </div>
+                    <div class="form-group-inline">
+                        <label>Hauteur</label>
+                        <input type="number" [(ngModel)]="selectedField.height" class="form-control-small"
+                            (blur)="onFieldUpdated(selectedField)" step="1" />
+                    </div>
+                </div>
+
+                <h4>Validation</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" [(ngModel)]="selectedField.validation.required"
+                            (change)="onFieldUpdated(selectedField)" />
+                        Champ obligatoire
+                    </label>
+                </div>
+
+                <div class="form-group"
+                    *ngIf="selectedField.type === 'text' || selectedField.type === 'input' || selectedField.type === 'textarea'">
+                    <label>Longueur minimale</label>
+                    <input type="number" [(ngModel)]="selectedField.validation.minLength" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group"
+                    *ngIf="selectedField.type === 'text' || selectedField.type === 'input' || selectedField.type === 'textarea'">
+                    <label>Longueur maximale</label>
+                    <input type="number" [(ngModel)]="selectedField.validation.maxLength" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group" *ngIf="selectedField.type === 'number'">
+                    <label>Valeur minimale</label>
+                    <input type="number" [(ngModel)]="selectedField.validation.min" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group" *ngIf="selectedField.type === 'number'">
+                    <label>Valeur maximale</label>
+                    <input type="number" [(ngModel)]="selectedField.validation.max" class="form-control"
+                        (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Message d'erreur personnalisé</label>
+                    <input type="text" [(ngModel)]="selectedField.validation.errorMessage" class="form-control"
+                        placeholder="Message affiché en cas d'erreur" (blur)="onFieldUpdated(selectedField)" />
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-danger" (click)="onFieldDeleted(selectedField.id)">
+                        <i class="fas fa-trash"></i>
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau de navigation des pages -->
+        <div class="pages-sidebar" *ngIf="showToolbar && totalPages > 1">
+            <div class="pages-header">
+                <h4>Pages</h4>
+            </div>
+            <div class="pages-list">
+                <div *ngFor="let page of [].constructor(totalPages); let i = index" 
+                     class="page-item" 
+                     [class.active]="currentPage === i + 1"
+                     (click)="goToPage(i + 1)">
+                    <div class="page-thumbnail">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <span class="page-number">{{i + 1}}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

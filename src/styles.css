@@ -103,3 +103,52 @@ input, textarea, select {
 .slide-in {
   animation: slideIn 0.3s ease;
 }
+
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablettes et petits écrans */
+@media (max-width: 1024px) {
+  body {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  body {
+    font-size: 12px;
+  }
+  
+  /* Cacher les éléments non essentiels sur mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+  
+  /* Adapter les boutons pour le tactile */
+  button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Très petits écrans */
+@media (max-width: 480px) {
+  body {
+    font-size: 11px;
+  }
+}
+
+/* Classes utilitaires responsive */
+.container-fluid {
+  width: 100%;
+  padding: 0 15px;
+}
+
+@media (min-width: 768px) {
+  .container-fluid {
+    padding: 0 30px;
+  }
+}

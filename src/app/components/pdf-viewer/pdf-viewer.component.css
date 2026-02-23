@@ -1,37 +1,45 @@
+/* ============================================ */
+/* PDF VIEWER - TAILLE RAISONNABLE + ESPACE     */
+/* ============================================ */
+
 .pdf-viewer-container {
   position: relative;
   width: 100%;
-  height: calc(100vh - 200px);
-  background: #f5f5f5;
-  overflow: auto;
+  height: 100%;
+background: #e9ecef;
+overflow: auto;
+padding: 32px 16px;
+display: flex;
+  justify-content: center;
+align-items: flex-start;
 }
 
+/* Overlay de chargement */
 .loading-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(6px);
 
   .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
+    width: 56px;
+    height: 56px;
+    border: 5px solid #e2e8f0;
+    border-top: 5px solid #0d6efd;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
 
   p {
-    color: #666;
-    font-size: 14px;
+    color: #495057;
+    font-size: 1rem;
+    font-weight: 500;
   }
 }
 
@@ -40,194 +48,374 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Conteneur principal du PDF (taille contrôlée) */
 .pdf-container {
   position: relative;
-  margin: 20px auto;
-  width: fit-content;
-  min-height: 100%;
+  margin: 0 auto;
+width: fit-content;
+  max-width: 100%;
+min-height: 200px;
+background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
+/* Canvas PDF - taille raisonnable par défaut */
 .pdf-canvas {
-  display: block;
+  display: block !important;
   background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #ddd;
-  border-radius: 4px;
-
-  &.select-mode {
-    cursor: move;
-  }
-
-  &.text-mode {
-    cursor: text;
-  }
-
-  &.checkbox-mode {
-    cursor: crosshair;
-  }
+  box-shadow: none;
+border: none;
+  transition: transform 0.2s ease;
 }
 
+/* Champs superposés */
 .fields-layer {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   pointer-events: none;
+  z-index: 50;
+
+  .field-container {
+    position: absolute !important;
+    pointer-events: auto !important;
+    cursor: move;
+    border-radius: 4px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: transparent !important;
+  border: none !important;
+
+    &:hover {
+      outline: 2px dashed #0d6efd;
+      outline-offset: 2px;
+    }
+
+    &.selected {
+      outline: 2px solid #0d6efd;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2);
+    }
+  }
+}
+
+/* Responsive : sur petit écran, moins de padding */
+@media (max-width: 768px) {
+  .pdf-viewer-container {
+    padding: 16px 8px;
+  }
+
+  .pdf-container {
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+}
+
+/* Quand on zoome beaucoup */
+.pdf-canvas.zoomed {
+  transform-origin: top left;
+}
+
+/*// ============================================*/
+/*// CHAMP TEXTE - TOUJOURS TRANSPARENT*/
+/*// Que ce soit en mode fill ou non, en édition ou non*/
+/*// ============================================*/
+
+.text-field {
+  position: relative;
   width: 100%;
   height: 100%;
 
-  .field-container {
-    position: absolute;
-    pointer-events: auto;
-    cursor: move;
-    transition: all 0.2s ease;
-    border-radius: 2px;
+/*// FORCER LA TRANSPARENCE TOTALE*/
+background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
 
-    &.selected {
-      outline: 2px solid #007bff;
-      outline-offset: 2px;
-      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-    }
+/*// Mode affichage (texte déjà saisi)*/
+.text-display {
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  margin: 0;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.2;
 
-    &:hover {
-      outline: 1px dashed #007bff;
-    }
+  span {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
-}
 
-.text-field {
-  padding: 2px 4px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid transparent;
-  border-radius: 2px;
-  font-family: Arial, sans-serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  position: relative;
-
-  .field-handle {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 16px;
-    height: 16px;
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    cursor: move;
+  &.empty-text .placeholder-text {
+    color: #cbd5e0;
+    font-style: italic;
     opacity: 0;
     transition: opacity 0.2s;
   }
 
-  &:hover .field-handle {
-    opacity: 1;
+  &.empty-text:hover .placeholder-text {
+    opacity: 0.3;
+  }
+}
+
+/*// Mode édition - INPUT TOUJOURS INVISIBLE*/
+.text-edit-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+/*// Dimensions*/
+width: auto !important;
+  min-width: 100px !important;
+  max-width: 600px !important;
+  height: auto !important;
+
+/*// Espacement - AUCUN*/
+padding: 0 !important;
+  margin: 0 !important;
+
+/*// Apparence - TOUJOURS TRANSPARENT*/
+background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+
+/*// Comportement*/
+resize: none;
+  overflow: visible;
+  font-family: inherit;
+  line-height: 1.2;
+
+/*// Curseur visible*/
+caret-color: #3182ce !important;
+
+/*// Sélection de texte*/
+&::selection {
+  background: rgba(49, 130, 206, 0.3);
+}
+
+/*// FOCUS - rester invisible*/
+&:focus {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/*// HOVER - rester invisible*/
+&:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/*// ACTIVE - rester invisible*/
+&:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/*// Supprimer apparence native*/
+-webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+/*// Autocomplete transparent*/
+&:-webkit-autofill,
+&:-webkit-autofill:hover,
+&:-webkit-autofill:focus,
+&:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  background-color: transparent !important;
+  background: transparent !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+  &::placeholder {
+    color: transparent !important;
+    opacity: 0 !important;
+  }
+}
+
+/*// Masquer les handles*/
+.field-handle {
+  display: none !important;
+}
+}
+
+/*// ============================================*/
+/*// CONTENEUR DE CHAMP - TOUJOURS TRANSPARENT*/
+/*// ============================================*/
+
+.field-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  &:hover {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  &.selected {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  &:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  &:active {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+/*// Supprimer le ::before pour les bordures en pointillés*/
+&::before {
+  display: none !important;
+}
+}
+
+/*// ============================================*/
+/*// MODE FILL - Renforcement de la transparence*/
+/*// ============================================*/
+
+.fields-layer.fill-mode {
+  .field-container {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    cursor: text !important;
+
+    * {
+      background: transparent !important;
+    }
+  }
+
+  .text-field {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+
+    .text-edit-input {
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
+/*// ============================================*/
+/*// Autres types de champs*/
+/*// ============================================*/
+
+.checkbox-field,
+.image-field,
+.signature-field,
+.input-field,
+.textarea-field {
+  position: relative;
+
+  .field-handle {
+    display: none !important;
   }
 }
 
 .checkbox-field {
-  position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000000;
+  width: 100%;
+  height: 100%;
 
-  .checkbox-box {
-    width: 100%;
-    height: 100%;
-    border: 2px solid #333;
-    background: white;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
+  .checkbox-icon {
+    color: #000000 !important;
+    font-size: inherit;
+    transition: transform 0.2s ease;
 
-    &.checked {
-      background: #007bff;
-      border-color: #007bff;
-      color: white;
+    &:hover {
+      transform: scale(1.1);
     }
   }
-
-  .field-handle {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 16px;
-    height: 16px;
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    cursor: move;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  &:hover .field-handle {
-    opacity: 1;
-  }
 }
 
-.signature-field {
-  position: relative;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: white;
-  }
-
-  .field-handle {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 16px;
-    height: 16px;
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    cursor: move;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  &:hover .field-handle {
-    opacity: 1;
-  }
+.image-field img,
+.signature-field img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
+/*// Indicateur d'outil actif*/
 .active-tool-indicator {
   position: absolute;
-  top: 10px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  background: #007bff;
+  background: #3182ce;
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
   z-index: 100;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
 
   .indicator-text {
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
