@@ -66,6 +66,60 @@
 
       <button
         class="tool-btn"
+        [class.active]="activeTool === 'highlight'"
+        (click)="selectTool('highlight')"
+        title="Surligner">
+        <i class="fas fa-highlighter"></i>
+        <span class="tool-label">Surligner</span>
+      </button>
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'draw'"
+        (click)="selectTool('draw')"
+        title="Dessiner">
+        <i class="fas fa-pen"></i>
+        <span class="tool-label">Dessiner</span>
+      </button>
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'line'"
+        (click)="selectTool('line')"
+        title="Ligne">
+        <i class="fas fa-minus"></i>
+        <span class="tool-label">Ligne</span>
+      </button>
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'arrow'"
+        (click)="selectTool('arrow')"
+        title="Flèche">
+        <i class="fas fa-arrow-right"></i>
+        <span class="tool-label">Flèche</span>
+      </button>
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'rectangle'"
+        (click)="selectTool('rectangle')"
+        title="Rectangle">
+        <i class="far fa-square"></i>
+        <span class="tool-label">Rectangle</span>
+      </button>
+
+      <button
+        class="tool-btn"
+        [class.active]="activeTool === 'circle'"
+        (click)="selectTool('circle')"
+        title="Cercle">
+        <i class="far fa-circle"></i>
+        <span class="tool-label">Cercle</span>
+      </button>
+
+      <button
+        class="tool-btn"
         [class.active]="activeTool === 'select'"
         (click)="selectTool('select')"
         title="Sélectionner et déplacer">

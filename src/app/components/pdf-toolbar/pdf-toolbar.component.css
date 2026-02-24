@@ -5,22 +5,22 @@
   border-bottom: 1px solid #e1e8ed;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
   z-index: 999;
   flex-wrap: wrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  max-height: 90px;
+  overflow: visible;
+  min-height: 60px;
 }
 
 .toolbar-section {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .tool-group {
@@ -89,9 +89,10 @@
   background: #f7fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-left: 12px;
   flex-wrap: wrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  margin-top: 8px;
 }
 
 .toolbar-group {
@@ -355,7 +356,7 @@
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .tool-label {
     display: none;
   }
@@ -367,6 +368,21 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .toolbar {
+    padding: 10px 16px;
+    gap: 12px;
+  }
+
+  .tool-group {
+    gap: 2px;
+  }
+
+  .toolbar-section {
+    gap: 8px;
+  }
+}
+
 @media (max-width: 768px) {
   .toolbar {
     padding: 10px 12px;
@@ -374,8 +390,12 @@
   }
 
   .text-toolbar {
-    margin-left: 0;
     margin-top: 8px;
-    width: 100%;
+    padding: 8px 12px;
+  }
+
+  .toolbar-select {
+    min-width: 100px;
+    font-size: 12px;
   }
 }

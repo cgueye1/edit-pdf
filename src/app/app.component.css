@@ -41,9 +41,20 @@
     align-items: center;
     gap: 10px;
 
+    .pdf-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
     .fa-file-pdf {
       font-size: 22px;
       color: #e53e3e;
+    }
+
+    strong {
+      color: #3182ce;
+      font-weight: 700;
     }
   }
 }
@@ -551,15 +562,13 @@
   .close-btn, .menu-btn {
     background: none;
     border: none;
-    font-size: 1rem;
-    color: #495057;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    transition: background 0.2s;
+    padding: 8px;
+    color: #6c757d;
+    transition: color 0.2s;
 
     &:hover {
-      background: rgba(0,0,0,0.07);
+      color: #495057;
     }
   }
 

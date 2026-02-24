@@ -44,6 +44,35 @@
   flex: 1;
 }
 
+.btn-pdf-info {
+  background: rgba(0, 102, 204, 0.08);
+  border: 1px solid rgba(0, 102, 204, 0.2);
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0066cc;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-pdf-info:hover {
+  background: rgba(0, 102, 204, 0.15);
+  border-color: rgba(0, 102, 204, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-pdf-info i {
+  font-size: 14px;
+}
+
 .template-name-input {
   flex: 1;
   padding: 8px 12px;

@@ -20,6 +20,9 @@ import { PdfViewerComponent } from './components/pdf-viewer/pdf-viewer.component
 import { SignaturePadComponent } from './components/signature-pad/signature-pad.component';
 import { SavedDocumentsComponent } from './components/saved-documents/saved-documents.component';
 import { FieldPropertiesComponent } from './components/field-properties/field-properties.component';
+import { PdfInfoModalComponent } from './components/pdf-info-modal/pdf-info-modal.component';
+import { PdfPreviewModalComponent } from './components/pdf-preview-modal/pdf-preview-modal.component';
+import { DrawingCanvasComponent } from './components/drawing-canvas/drawing-canvas.component';
 import * as pdfjs from 'pdfjs-dist';
 import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.component";
 
@@ -35,9 +38,12 @@ import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.co
     SavedDocumentsComponent,
     FieldPropertiesComponent,
     PagesSidebarComponent,
+    PdfInfoModalComponent,
+    PdfPreviewModalComponent,
+    DrawingCanvasComponent,
   ],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+  styleUrls: ['./app.component.css'],
   standalone: true
 })
 export class AppComponent implements OnInit {
@@ -102,6 +108,11 @@ export class AppComponent implements OnInit {
   sidebarCollapsed: boolean = false;
   showProperties: boolean = true;
   private isGeneratingThumbnails: boolean = false;
+  showPdfInfoModal = false;
+  showPdfPreviewModal = false;
+  previewPdfUrl: string = '';
+  isDrawingMode = false;
+  drawingTool: string | null = null;
 
 
 
@@ -257,11 +268,9 @@ export class AppComponent implements OnInit {
       const originalBuffer = await this.pdfFile.arrayBuffer();
       const fileName = this.pdfFile.name;
 
-      // Chercher un document sauvegardé avec le même nom
       const savedDoc = this.storageService.getAllDocuments().find(doc => doc.name === fileName);
 
       if (savedDoc) {
-        // Charger le document sauvegardé avec ses champs
         this.currentDocument = {
           ...savedDoc,
           updatedAt: new Date(savedDoc.updatedAt),
@@ -269,7 +278,6 @@ export class AppComponent implements OnInit {
         };
         console.log('✅ Document sauvegardé trouvé avec', this.currentDocument.fields.length, 'champs');
       } else {
-        // Nouveau document
         this.currentDocument = {
           id: this.generateId(),
           name: fileName,
@@ -280,7 +288,13 @@ export class AppComponent implements OnInit {
         };
       }
 
-      await this.pdfService.loadPdf(originalBuffer.slice(0));
+      // Charger dans pdf-lib seulement si nécessaire (pour l'export)
+      try {
+        await this.pdfService.loadPdf(originalBuffer.slice(0));
+      } catch (error) {
+        console.warn('⚠️ PDF non compatible avec pdf-lib, export limité:', error);
+      }
+
       this.pdfData = originalBuffer.slice(0);
       const fileCopy = new File([originalBuffer], fileName, { type: this.pdfFile.type });
       this.pdfUrl = URL.createObjectURL(fileCopy);
@@ -305,10 +319,24 @@ export class AppComponent implements OnInit {
 
   onToolSelected(tool: string): void {
     this.activeTool = tool;
+    
+    // Activer le mode dessin pour les outils de dessin
+    if (['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle'].includes(tool)) {
+      this.isDrawingMode = true;
+      this.drawingTool = tool;
+    } else {
+      this.isDrawingMode = false;
+      this.drawingTool = null;
+    }
   }
 
   async onPageClick(event: { x: number; y: number; page: number }): Promise<void> {
     if (!this.activeTool) return;
+
+    // Mode dessin - ne pas créer de champ au clic
+    if (this.isDrawingMode) {
+      return;
+    }
 
     try {
       let newField: PDFField;
@@ -551,19 +579,14 @@ export class AppComponent implements OnInit {
       return;
     }
     try {
-      // Générer le PDF et l'ouvrir dans un nouvel onglet
       const blob = await this.pdfService.exportPdf(
         this.currentDocument.fields,
         `${this.currentDocument.name}.pdf`,
-        true // preview mode
+        true
       );
 
-      // Créer une URL d'objet et ouvrir dans un nouvel onglet
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-
-      // Nettoyer l'URL après un délai
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.previewPdfUrl = URL.createObjectURL(blob);
+      this.showPdfPreviewModal = true;
     } catch (error) {
       console.error("Erreur prévisualisation:", error);
       alert("Erreur lors de la prévisualisation: " + (error instanceof Error ? error.message : String(error)));
@@ -619,29 +642,41 @@ export class AppComponent implements OnInit {
   }
 
   onLoad(): void {
+    // Sauvegarder automatiquement l'état actuel avant d'ouvrir la modal
+    if (this.currentDocument.fields.length > 0 && this.pdfUrl) {
+      this.storageService.saveDocument(this.currentDocument);
+      console.log('✅ État actuel sauvegardé automatiquement');
+    }
     this.showSavedDocuments = true;
   }
 
-  async loadSavedDocument(document: PDFDocumentState): Promise<void> {
-    console.log('🔄 Chargement du document:', document.name);
+  async loadSavedDocument(doc: PDFDocumentState): Promise<void> {
+    console.log('🔄 Chargement du document:', doc.name);
     
     this.currentDocument = {
-      ...document,
-      updatedAt: new Date(document.updatedAt),
-      createdAt: new Date(document.createdAt)
+      ...doc,
+      updatedAt: new Date(doc.updatedAt),
+      createdAt: new Date(doc.createdAt)
     };
 
     console.log('✅ Document chargé avec', this.currentDocument.fields.length, 'champs');
     
-    if (this.pdfUrl && this.pdfData && this.pdfFile?.name === document.name) {
+    if (this.pdfUrl && this.pdfData && this.pdfFile?.name === doc.name) {
       console.log('✅ PDF correspondant déjà chargé, application des champs');
       this.updateHistoryButtons();
-      alert(`Document "${document.name}" chargé avec succès !\n${document.fields.length} champs restaurés.`);
+      alert(`Document "${doc.name}" chargé avec succès !\n${doc.fields.length} champs restaurés.`);
     } else {
-      const message = document.fields.length > 0
-        ? `Document "${document.name}" chargé avec ${document.fields.length} champs.\n\nVeuillez charger le fichier PDF "${document.name}" pour voir les modifications.`
-        : `Document "${document.name}" chargé.\n\nCe document ne contient aucun champ.\nChargez le PDF "${document.name}" pour commencer à l'éditer.`;
-      alert(message);
+      this.showSavedDocuments = false;
+      
+      setTimeout(() => {
+        const message = `📄 Sélectionnez le fichier PDF "${doc.name}" pour voir vos ${doc.fields.length} champs.`;
+        alert(message);
+        
+        const fileInput = window.document.getElementById('pdfInput') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.click();
+        }
+      }, 300);
     }
   }
 
@@ -685,5 +720,48 @@ export class AppComponent implements OnInit {
 
   onCloseSavedDocuments(): void {
     this.showSavedDocuments = false;
+  }
+
+  openPdfInfoModal(): void {
+    this.showPdfInfoModal = true;
+  }
+
+  closePdfInfoModal(): void {
+    this.showPdfInfoModal = false;
+  }
+
+  closePdfPreviewModal(): void {
+    if (this.previewPdfUrl) {
+      URL.revokeObjectURL(this.previewPdfUrl);
+      this.previewPdfUrl = '';
+    }
+    this.showPdfPreviewModal = false;
+  }
+
+  onDrawingComplete(dataUrl: string): void {
+    const newField: PDFField = {
+      id: `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'image',
+      x: 50,
+      y: 50,
+      width: this.pageDimensions.width - 100,
+      height: this.pageDimensions.height - 100,
+      value: dataUrl,
+      page: this.currentDocument.currentPage - 1,
+    };
+    
+    this.currentDocument.fields = [...this.currentDocument.fields, newField];
+    this.currentDocument.updatedAt = new Date();
+    this.saveState();
+    
+    this.isDrawingMode = false;
+    this.drawingTool = null;
+    this.activeTool = null;
+  }
+
+  onDrawingCancelled(): void {
+    this.isDrawingMode = false;
+    this.drawingTool = null;
+    this.activeTool = null;
   }
 }

@@ -7,11 +7,12 @@ import { PdfService } from '../../../services/pdf.service';
 import { FormTemplate, TemplateField } from '../../../models/template.model';
 import { PDFField, PDFDocumentState } from '../../../models/pdf.model';
 import { PdfViewerComponent } from '../../pdf-viewer/pdf-viewer.component';
+import { PdfInfoModalComponent } from '../../pdf-info-modal/pdf-info-modal.component';
 
 @Component({
   selector: 'app-template-editor',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PdfViewerComponent],
+  imports: [CommonModule, RouterModule, FormsModule, PdfViewerComponent, PdfInfoModalComponent],
   templateUrl: './template-editor.component.html',
   styleUrls: ['./template-editor.component.css'],
 })
@@ -37,6 +38,7 @@ export class TemplateEditorComponent implements OnInit {
 
   zoomLevel: number = 100;
   scale: number = 1.5;
+  showPdfInfoModal = false;
 
   zoomIn(): void {
     this.scale = Math.min(this.scale + 0.2, 3);
@@ -51,6 +53,14 @@ export class TemplateEditorComponent implements OnInit {
   fitToScreen(): void {
     this.scale = 1.0;
     this.zoomLevel = 100;
+  }
+
+  openPdfInfoModal(): void {
+    this.showPdfInfoModal = true;
+  }
+
+  closePdfInfoModal(): void {
+    this.showPdfInfoModal = false;
   }
 
   constructor(

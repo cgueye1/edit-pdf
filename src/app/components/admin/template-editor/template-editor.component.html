@@ -12,6 +12,10 @@
                 <input type="text" [(ngModel)]="templateDescription" placeholder="Description (optionnel)"
                     class="template-description-input" />
             </div>
+            <button class="btn-pdf-info" *ngIf="pdfFile" (click)="openPdfInfoModal()" title="Informations du PDF">
+                <i class="fas fa-info-circle"></i>
+                {{ pdfFile.name }}
+            </button>
         </div>
         <div class="header-right">
             <button class="btn btn-primary" (click)="saveTemplate()">
@@ -20,6 +24,14 @@
             </button>
         </div>
     </header>
+
+    <!-- Modal d'informations PDF -->
+    <app-pdf-info-modal 
+        [isOpen]="showPdfInfoModal" 
+        [pdfFile]="pdfFile" 
+        [pdfUrl]="pdfUrl"
+        (closed)="closePdfInfoModal()">
+    </app-pdf-info-modal>
 
     <div class="editor-content">
         <!-- Barre d'outils -->
