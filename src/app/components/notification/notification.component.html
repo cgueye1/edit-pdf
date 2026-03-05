@@ -1,0 +1,16 @@
+<div [id]="'notification-' + notification.id" 
+     class="notification" 
+     [class.notification-success]="notification.type === 'success'"
+     [class.notification-error]="notification.type === 'error'"
+     [class.notification-warning]="notification.type === 'warning'"
+     [class.notification-info]="notification.type === 'info'">
+  <div class="notification-content">
+    <i class="fas" [ngClass]="getIcon()"></i>
+    <span class="notification-message">{{ notification.message }}</span>
+    <button class="notification-close" (click)="close()" aria-label="Fermer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+</div>
+
+

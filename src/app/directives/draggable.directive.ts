@@ -44,7 +44,7 @@ export class DraggableDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const element = this.el.nativeElement;
-    element.style.cursor     = 'move';
+    // Ne pas forcer le curseur move au chargement, seulement pendant le drag
     element.style.userSelect = 'none';
     element.style.position   = 'absolute';
 

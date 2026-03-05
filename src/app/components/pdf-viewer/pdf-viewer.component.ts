@@ -48,6 +48,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     isRendering = false;
     editingField: PDFField | null = null;
     isResizing = false;
+    isDragging = false;
 
     ngAfterViewInit(): void {
         if (this.pdfUrl) this.loadPdf();
@@ -65,61 +66,64 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
 
-  // Dans la classe PdfViewerComponent
+    // Dans la classe PdfViewerComponent
 
-  zoomLevel: number = 1; // Pour afficher % dans la barre si besoin
+    zoomLevel: number = 1; // Pour afficher % dans la barre si besoin
 
-// Méthode pour zoom (appelée depuis la barre en bas)
-  zoomIn() {
-    this.scale = Math.min(this.scale + 0.2, 3);
-    this.zoomLevel = Math.round(this.scale * 100);
-    this.renderPage(); // Re-rendu pour appliquer le nouveau scale
-  }
+    // Méthode pour zoom (appelée depuis la barre en bas)
+    zoomIn() {
+        this.scale = Math.min(this.scale + 0.2, 3);
+        this.zoomLevel = Math.round(this.scale * 100);
+        this.renderPage(); // Re-rendu pour appliquer le nouveau scale
+    }
 
-  zoomOut() {
-    this.scale = Math.max(this.scale - 0.2, 0.4);
-    this.zoomLevel = Math.round(this.scale * 100);
-    this.renderPage();
-  }
+    zoomOut() {
+        this.scale = Math.max(this.scale - 0.2, 0.4);
+        this.zoomLevel = Math.round(this.scale * 100);
+        this.renderPage();
+    }
 
-  fitToScreen() {
-    if (!this.pageWidth || !this.pdfContainerRef) return;
+    fitToScreen() {
+        if (!this.pageWidth || !this.pdfContainerRef) return;
 
-    const containerWidth = this.pdfContainerRef.nativeElement.clientWidth - 64; // marges
-    const newScale = containerWidth / this.pageWidth;
+        const containerWidth = this.pdfContainerRef.nativeElement.clientWidth - 64; // marges
+        const newScale = containerWidth / this.pageWidth;
 
-    this.scale = Math.max(0.5, Math.min(newScale, 1.2)); // limite raisonnable
-    this.zoomLevel = Math.round(this.scale * 100);
-    this.renderPage();
-  }
+        this.scale = Math.max(0.5, Math.min(newScale, 1.2)); // limite raisonnable
+        this.zoomLevel = Math.round(this.scale * 100);
+        this.renderPage();
+    }
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['pdfUrl'] && this.pdfUrl) this.loadPdf();
         if ((changes['currentPage'] || changes['scale']) && this.pdfDocument) this.renderPage();
 
         if (changes['fields'] && this.fields.length > 0) {
             const previousFields = changes['fields'].previousValue || [];
-            const newFields = this.fields.filter(
+            const newFieldsList = this.fields.filter(
                 (f) => !previousFields.some((pf: PDFField) => pf.id === f.id),
             );
-            if (newFields.length > 0 && !this.editingField) {
-                const newTextField = newFields.find((f) => f.type === 'text' && (!f.value || f.value === ''));
-                if (newTextField) this.startEditingField(newTextField);
+            // Ouvrir automatiquement en mode édition les nouveaux champs texte vides
+            if (newFieldsList.length > 0 && !this.editingField) {
+                const newTextField = newFieldsList.find((f) => f.type === 'text' && (!f.value || f.value === ''));
+                if (newTextField) {
+                    setTimeout(() => this.startEditingField(newTextField), 50);
+                }
             }
         }
     }
 
     async loadPdf(): Promise<void> {
         try {
-            console.log('📄 Chargement PDF dans viewer:', this.pdfUrl);
+            // Chargement PDF
             this.isRendering = true;
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
             const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
             this.pdfDocument = await loadingTask.promise;
-            console.log('✅ PDF document chargé, pages:', this.pdfDocument.numPages);
+            // PDF document chargé
             await this.renderPage();
-            console.log('✅ Page rendue');
+            // Page rendue
         } catch (error) {
-            console.error('❌ Erreur chargement PDF:', error);
+            // Erreur silencieuse
         } finally {
             this.isRendering = false;
         }
@@ -153,7 +157,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
                 height: this.pageHeight,
             });
         } catch (error) {
-            console.error('Erreur rendu page:', error);
+            // Erreur silencieuse
         } finally {
             this.isRendering = false;
         }
@@ -162,12 +166,12 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     async detectFormFields(page: any): Promise<void> {
         try {
             const annotations = await page.getAnnotations();
-            console.log('Champs détectés:', annotations);
+            // Champs détectés
 
             // Émettre les champs détectés pour que le template-editor puisse les utiliser
             // Vous pouvez traiter les annotations ici si nécessaire
         } catch (error) {
-            console.error('Erreur détection champs:', error);
+            // Erreur silencieuse
         }
     }
 
@@ -233,20 +237,27 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     onFieldDragStart(field: PDFField, dragData: any): void {
         if (this.editingField?.id === field.id) this.finishEditing(field);
         this.selectedField = field;
+        this.isDragging = true;
         this.fieldSelected.emit(field);
+        // Ajouter une classe au body pour le curseur global
+        document.body.style.cursor = 'move';
     }
 
     onFieldDragging(event: { x: number; y: number }): void {
         // La directive gère le visuel en temps réel
+        document.body.style.cursor = 'move';
     }
 
     onFieldDragEnd(event: { x: number; y: number; data: any }): void {
+        this.isDragging = false;
+        document.body.style.cursor = '';
+
         if (!event.data) return;
         const field = event.data as PDFField;
 
         const existingField = this.fields.find(f => f.id === field.id);
         if (!existingField) {
-            console.warn('Champ non trouvé lors du drag:', field.id);
+            // Champ non trouvé
             return;
         }
 
@@ -271,20 +282,23 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     onFieldResizeStart(field: PDFField): void {
         this.selectedField = field;
         this.isResizing = true;
+        document.body.style.cursor = 'nwse-resize';
     }
 
     onFieldResizing(event: { width: number; height: number; x: number; y: number }): void {
         // La directive gère le visuel en temps réel
+        document.body.style.cursor = 'nwse-resize';
     }
 
     onFieldResizeEnd(event: { width: number; height: number; x: number; y: number; data: any }): void {
         this.isResizing = false;
+        document.body.style.cursor = '';
         if (!event.data) return;
         const field = event.data as PDFField;
 
         const existingField = this.fields.find(f => f.id === field.id);
         if (!existingField) {
-            console.warn('Champ non trouvé lors du resize:', field.id);
+            // Champ non trouvé
             return;
         }
 
@@ -309,6 +323,14 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
     onFieldContainerClick(field: PDFField, event: MouseEvent): void {
+        // Si l'outil effaceur est actif, supprimer le champ
+        if (this.activeTool === 'eraser') {
+            event.stopPropagation();
+            this.fieldDeleted.emit(field);
+            this.selectedField = null;
+            return;
+        }
+
         const target = event.target as HTMLElement;
         if (target.closest('.checkbox-field')) {
             return;
@@ -321,7 +343,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
 
         const existingField = this.fields.find(f => f.id === field.id);
         if (!existingField) {
-            console.warn('Champ non trouvé lors de la sélection:', field.id);
+            // Champ non trouvé
             return;
         }
 
@@ -388,8 +410,26 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
     onTextEditBlur(field: PDFField, newText: string): void {
-        if (newText !== field.value) this.fieldTextEdit.emit({ field, newText });
+        const trimmedText = (newText || '').trim();
+        const currentValue = typeof field.value === 'string' ? field.value.trim() : '';
+
+        // Si le champ est vide après édition, le supprimer
+        if (!trimmedText && !currentValue) {
+            this.deleteField(field);
+            this.editingField = null;
+            return;
+        }
+
+        // Si le texte a changé, émettre l'événement
+        if (trimmedText !== currentValue) {
+            this.fieldTextEdit.emit({ field, newText: trimmedText });
+        }
+
         this.editingField = null;
+    }
+
+    deleteField(field: PDFField): void {
+        this.fieldDeleted.emit(field);
     }
 
     onTextEditKeydown(field: PDFField, event: KeyboardEvent, newText: string): void {
@@ -437,32 +477,37 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
     // Gestion des champs date
-    onDateEditBlur(field: PDFField, newValue: string): void {
-        if (newValue !== field.value) {
-            // Convertir la date au format YYYY-MM-DD en format français DD/MM/YYYY
-            let dateStr = newValue;
-            if (newValue) {
-                const date = new Date(newValue);
-                if (!isNaN(date.getTime())) {
-                    dateStr = date.toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-                }
-            }
-            this.fieldTextEdit.emit({ field, newText: dateStr });
+    getDateValue(value: string | boolean | string[] | undefined): string {
+        if (!value || typeof value !== 'string') return '';
+        // Si la valeur est déjà au format YYYY-MM-DD, la retourner telle quelle
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
         }
-        this.editingField = null;
+        // Sinon, convertir depuis DD/MM/YYYY vers YYYY-MM-DD
+        const parts = value.split('/');
+        if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+            return `${year}-${month}-${day}`;
+        }
+        return '';
     }
 
-    onDateEditKeydown(field: PDFField, event: KeyboardEvent): void {
-        if (event.key === 'Enter' || event.key === 'Escape') {
-            event.preventDefault();
-            const input = document.getElementById(`date-edit-${field.id}`) as HTMLInputElement;
-            if (input) {
-                input.blur();
+    onDateChange(field: PDFField, newValue: string): void {
+        if (newValue) {
+            // Convertir la date au format YYYY-MM-DD en format français DD/MM/YYYY
+            const date = new Date(newValue);
+            if (!isNaN(date.getTime())) {
+                const dateStr = date.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                this.fieldTextEdit.emit({ field, newText: dateStr });
             }
+        } else {
+            this.fieldTextEdit.emit({ field, newText: '' });
         }
     }
 

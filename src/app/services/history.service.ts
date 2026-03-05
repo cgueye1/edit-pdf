@@ -5,7 +5,7 @@ import { PDFDocumentState, HistoryState } from '../models/pdf.model';
   providedIn: 'root'
 })
 export class HistoryService {
-  private readonly MAX_HISTORY = 50;
+  private readonly MAX_HISTORY = 10; // Réduit de 50 à 10 pour éviter le quota
   private state: HistoryState = {
     past: [],
     present: null,
@@ -112,14 +112,69 @@ export class HistoryService {
           state.updatedAt = new Date(state.updatedAt);
         });
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'historique:', error);
+        // Erreur silencieuse - nettoyer l'historique corrompu
         this.clearHistory();
       }
     }
   }
 
   private saveToLocalStorage(): void {
-    localStorage.setItem('pdfEditorHistory', JSON.stringify(this.state));
+    try {
+      // Nettoyer les données volumineuses avant sauvegarde
+      const cleanedState = this.cleanStateForStorage(this.state);
+      const jsonString = JSON.stringify(cleanedState);
+      
+      // Vérifier la taille (localStorage limite ~5-10MB)
+      if (jsonString.length > 4 * 1024 * 1024) { // 4MB max
+        // Réduire encore plus l'historique si trop volumineux
+        if (this.state.past.length > 5) {
+          this.state.past = this.state.past.slice(-5);
+        }
+        const reducedState = this.cleanStateForStorage(this.state);
+        localStorage.setItem('pdfEditorHistory', JSON.stringify(reducedState));
+      } else {
+        localStorage.setItem('pdfEditorHistory', jsonString);
+      }
+    } catch (error: any) {
+      // Si erreur de quota, nettoyer l'ancien historique et réessayer
+      if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+        this.state.past = this.state.past.slice(-3); // Garder seulement les 3 derniers
+        this.state.future = [];
+        try {
+          const cleanedState = this.cleanStateForStorage(this.state);
+          localStorage.setItem('pdfEditorHistory', JSON.stringify(cleanedState));
+        } catch (e) {
+          // Si toujours en erreur, ne pas sauvegarder l'historique
+          localStorage.removeItem('pdfEditorHistory');
+        }
+      }
+    }
+  }
+
+  private cleanStateForStorage(state: HistoryState): HistoryState {
+    // Nettoyer les données inutiles pour réduire la taille
+    const clean = (doc: PDFDocumentState | null): PDFDocumentState | null => {
+      if (!doc) return null;
+      return {
+        ...doc,
+        originalFile: undefined, // Ne pas sauvegarder le fichier PDF
+        fields: doc.fields.map(f => {
+          // Nettoyer les champs pour réduire la taille
+          const cleaned: any = { ...f };
+          // Supprimer les données volumineuses inutiles
+          if (cleaned.value && typeof cleaned.value === 'string' && cleaned.value.length > 10000) {
+            cleaned.value = cleaned.value.substring(0, 10000); // Limiter les très longs textes
+          }
+          return cleaned;
+        })
+      };
+    };
+
+    return {
+      past: state.past.map(clean).filter((d): d is PDFDocumentState => d !== null),
+      present: clean(state.present),
+      future: state.future.map(clean).filter((d): d is PDFDocumentState => d !== null)
+    };
   }
 
   private hasStateChanged(oldState: PDFDocumentState, newState: PDFDocumentState): boolean {

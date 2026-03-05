@@ -356,6 +356,23 @@
   }
 }
 
+.tool-btn-danger {
+  &:hover:not(.disabled) {
+    background: #fed7d7;
+    color: #c53030;
+  }
+
+  &.active {
+    background: #e53e3e;
+    color: white;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+
+    &:hover {
+      background: #c53030;
+    }
+  }
+}
+
 @media (max-width: 1400px) {
   .tool-label {
     display: none;

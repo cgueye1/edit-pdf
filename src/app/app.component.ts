@@ -23,6 +23,8 @@ import { FieldPropertiesComponent } from './components/field-properties/field-pr
 import { PdfInfoModalComponent } from './components/pdf-info-modal/pdf-info-modal.component';
 import { PdfPreviewModalComponent } from './components/pdf-preview-modal/pdf-preview-modal.component';
 import { DrawingCanvasComponent } from './components/drawing-canvas/drawing-canvas.component';
+import { NotificationContainerComponent } from './components/notification-container/notification-container.component';
+import { NotificationService } from './services/notification.service';
 import * as pdfjs from 'pdfjs-dist';
 import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.component";
 
@@ -41,6 +43,7 @@ import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.co
     PdfInfoModalComponent,
     PdfPreviewModalComponent,
     DrawingCanvasComponent,
+    NotificationContainerComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -84,6 +87,7 @@ export class AppComponent implements OnInit {
 
   activeTool: string | null = null;
   showSignaturePad = false;
+  pendingSignaturePosition: { x: number; y: number; page: number } | null = null;
   showSavedDocuments = false;
   selectedField: PDFField | null = null;
   textProperties = {
@@ -127,6 +131,7 @@ export class AppComponent implements OnInit {
     private pdfService: PdfService,
     public historyService: HistoryService,
     private storageService: StorageService,
+    private notificationService: NotificationService,
   ) {
     pdfjs.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
   }
@@ -196,7 +201,7 @@ export class AppComponent implements OnInit {
 
       pdf.destroy().catch(() => {});
     } catch (err) {
-      console.error("Erreur génération miniatures :", err);
+      // Erreur silencieuse
     } finally {
       this.isGeneratingThumbnails = false;
     }
@@ -213,7 +218,8 @@ export class AppComponent implements OnInit {
       const lastDocument = documents.sort(
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       )[0];
-      if (confirm(`Voulez-vous charger le document "${lastDocument.name}" ?`)) {
+      // Charger automatiquement le dernier document sans confirmation
+      if (lastDocument) {
         this.loadSavedDocument(lastDocument);
       }
     }
@@ -252,8 +258,7 @@ export class AppComponent implements OnInit {
       await this.generateThumbnails();
       this.saveState();
     } catch (error) {
-      console.error('Erreur création PDF:', error);
-      alert('Erreur lors de la création du PDF');
+      this.notificationService.error('Erreur lors de la création du PDF vierge.');
     }
   }
 
@@ -276,7 +281,7 @@ export class AppComponent implements OnInit {
           updatedAt: new Date(savedDoc.updatedAt),
           createdAt: new Date(savedDoc.createdAt)
         };
-        console.log('✅ Document sauvegardé trouvé avec', this.currentDocument.fields.length, 'champs');
+        // Document sauvegardé trouvé
       } else {
         this.currentDocument = {
           id: this.generateId(),
@@ -292,7 +297,7 @@ export class AppComponent implements OnInit {
       try {
         await this.pdfService.loadPdf(originalBuffer.slice(0));
       } catch (error) {
-        console.warn('⚠️ PDF non compatible avec pdf-lib, export limité:', error);
+        // PDF non compatible avec pdf-lib
       }
 
       this.pdfData = originalBuffer.slice(0);
@@ -305,14 +310,13 @@ export class AppComponent implements OnInit {
       this.showThumbnails = true;
 
       if (savedDoc && savedDoc.fields.length > 0) {
-        alert(`PDF chargé avec succès !\n${savedDoc.fields.length} champs restaurés.`);
+        // PDF chargé silencieusement
       }
 
       this.saveState();
-    } catch (error) {
-      console.error('Erreur chargement PDF:', error);
-      alert('Erreur lors du chargement du PDF');
-    }
+      } catch (error) {
+        this.notificationService.error('Erreur lors de l\'ajout de l\'image. Format non supporté ou fichier corrompu.');
+      }
   }
 
   // ─── Outils ───────────────────────────────────────────────────────────────
@@ -332,6 +336,11 @@ export class AppComponent implements OnInit {
 
   async onPageClick(event: { x: number; y: number; page: number }): Promise<void> {
     if (!this.activeTool) return;
+
+    // Mode effaceur - géré dans onFieldDeleted
+    if (this.activeTool === 'eraser') {
+      return;
+    }
 
     // Mode dessin - ne pas créer de champ au clic
     if (this.isDrawingMode) {
@@ -408,6 +417,8 @@ export class AppComponent implements OnInit {
           return;
 
         case 'signature':
+          // Sauvegarder la position du clic pour placer la signature
+          this.pendingSignaturePosition = { x: event.x, y: event.y, page: event.page - 1 };
           this.showSignaturePad = true;
           return;
 
@@ -446,8 +457,7 @@ export class AppComponent implements OnInit {
       this.currentDocument.updatedAt = new Date();
       this.saveState();
     } catch (error) {
-      console.error("Erreur ajout champ:", error);
-      alert("Erreur: " + (error as Error).message);
+      this.notificationService.error('Erreur lors de l\'ajout du champ. Veuillez réessayer.');
     }
   }
 
@@ -482,7 +492,7 @@ export class AppComponent implements OnInit {
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        alert('Erreur image: ' + (error as Error).message);
+        this.notificationService.error('Erreur lors de l\'ajout de l\'image. Format non supporté ou fichier corrompu.');
       }
     };
     input.click();
@@ -527,35 +537,53 @@ export class AppComponent implements OnInit {
     }
   }
 
-  onFieldDeleted(field: PDFField): void {
-    this.currentDocument.fields = this.currentDocument.fields.filter(f => f.id !== field.id);
+  onFieldDeleted(field: PDFField | string): void {
+    // Gérer les deux cas : PDFField ou string (ID)
+    const fieldId = typeof field === 'string' ? field : field.id;
+    const fieldToDelete = typeof field === 'string' 
+      ? this.currentDocument.fields.find(f => f.id === fieldId)
+      : field;
+    
+    if (!fieldToDelete) return;
+    
+    this.currentDocument.fields = this.currentDocument.fields.filter(f => f.id !== fieldId);
     this.currentDocument.updatedAt = new Date();
     this.selectedField = null;
     this.saveState();
+    this.notificationService.success('Élément supprimé.');
   }
 
   onSignatureSaved(signatureDataUrl: string): void {
+    // Utiliser la position sauvegardée du clic ou une position par défaut
+    const position = this.pendingSignaturePosition || { 
+      x: 100, 
+      y: 100, 
+      page: this.currentDocument.currentPage - 1 
+    };
+    
     const newField: PDFField = {
       id:     `signature_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type:   'signature',
-      x:      100,
-      y:      100,
+      x:      position.x,
+      y:      position.y - 40, // Centrer verticalement (hauteur/2)
       width:  200,
       height: 80,
       value:  signatureDataUrl,
-      page:   this.currentDocument.currentPage - 1,
+      page:   position.page,
     };
     this.currentDocument.fields = [...this.currentDocument.fields, newField];
     this.currentDocument.updatedAt = new Date();
     this.saveState();
     this.showSignaturePad = false;
+    this.pendingSignaturePosition = null;
+    this.notificationService.success('Signature ajoutée avec succès.');
   }
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
   async onExport(): Promise<void> {
     if (this.currentDocument.fields.length === 0) {
-      alert('Aucun champ à exporter');
+      this.notificationService.warning('Aucun champ à exporter. Ajoutez des éléments avant d\'exporter.');
       return;
     }
     try {
@@ -566,16 +594,15 @@ export class AppComponent implements OnInit {
         `${this.currentDocument.name}.pdf`,
         false
       );
-      alert('PDF exporté avec succès!');
+      this.notificationService.success('PDF exporté avec succès !');
     } catch (error) {
-      console.error("Erreur export:", error);
-      alert("Erreur: " + (error instanceof Error ? error.message : String(error)));
+      this.notificationService.error('Erreur lors de l\'export du PDF. Veuillez réessayer.');
     }
   }
 
   async onPreview(): Promise<void> {
     if (this.currentDocument.fields.length === 0) {
-      alert('Aucun champ à prévisualiser');
+      this.notificationService.info('Aucun champ à prévisualiser. Ajoutez des éléments pour voir l\'aperçu.');
       return;
     }
     try {
@@ -588,8 +615,7 @@ export class AppComponent implements OnInit {
       this.previewPdfUrl = URL.createObjectURL(blob);
       this.showPdfPreviewModal = true;
     } catch (error) {
-      console.error("Erreur prévisualisation:", error);
-      alert("Erreur lors de la prévisualisation: " + (error instanceof Error ? error.message : String(error)));
+      this.notificationService.error('Erreur lors de la prévisualisation du PDF.');
     }
   }
 
@@ -604,12 +630,24 @@ export class AppComponent implements OnInit {
 
   onUndo(): void {
     const state = this.historyService.undo();
-    if (state) { this.currentDocument = state; this.updateHistoryButtons(); }
+    if (state) { 
+      this.currentDocument = state; 
+      this.updateHistoryButtons();
+      this.notificationService.info('Action annulée.');
+    } else {
+      this.notificationService.info('Aucune action à annuler.');
+    }
   }
 
   onRedo(): void {
     const state = this.historyService.redo();
-    if (state) { this.currentDocument = state; this.updateHistoryButtons(); }
+    if (state) { 
+      this.currentDocument = state; 
+      this.updateHistoryButtons();
+      this.notificationService.info('Action rétablie.');
+    } else {
+      this.notificationService.info('Aucune action à rétablir.');
+    }
   }
 
   updateHistoryButtons(): void {
@@ -637,7 +675,7 @@ export class AppComponent implements OnInit {
     if (name) {
       this.currentDocument.name = name;
       this.saveState();
-      alert('Document sauvegardé!');
+      this.notificationService.success('Document sauvegardé avec succès !');
     }
   }
 
@@ -645,13 +683,13 @@ export class AppComponent implements OnInit {
     // Sauvegarder automatiquement l'état actuel avant d'ouvrir la modal
     if (this.currentDocument.fields.length > 0 && this.pdfUrl) {
       this.storageService.saveDocument(this.currentDocument);
-      console.log('✅ État actuel sauvegardé automatiquement');
+      // État sauvegardé automatiquement
     }
     this.showSavedDocuments = true;
   }
 
   async loadSavedDocument(doc: PDFDocumentState): Promise<void> {
-    console.log('🔄 Chargement du document:', doc.name);
+    // Chargement du document
     
     this.currentDocument = {
       ...doc,
@@ -659,18 +697,16 @@ export class AppComponent implements OnInit {
       createdAt: new Date(doc.createdAt)
     };
 
-    console.log('✅ Document chargé avec', this.currentDocument.fields.length, 'champs');
-    
     if (this.pdfUrl && this.pdfData && this.pdfFile?.name === doc.name) {
-      console.log('✅ PDF correspondant déjà chargé, application des champs');
+      // PDF correspondant déjà chargé
       this.updateHistoryButtons();
-      alert(`Document "${doc.name}" chargé avec succès !\n${doc.fields.length} champs restaurés.`);
+      this.notificationService.success(`Document "${doc.name}" chargé avec ${doc.fields.length} champ(s).`);
     } else {
       this.showSavedDocuments = false;
       
       setTimeout(() => {
         const message = `📄 Sélectionnez le fichier PDF "${doc.name}" pour voir vos ${doc.fields.length} champs.`;
-        alert(message);
+        // Message silencieux
         
         const fileInput = window.document.getElementById('pdfInput') as HTMLInputElement;
         if (fileInput) {
@@ -681,11 +717,14 @@ export class AppComponent implements OnInit {
   }
 
   onClear(): void {
-    if (confirm('Effacer tous les champs ?')) {
-      this.currentDocument.fields    = [];
-      this.currentDocument.updatedAt = new Date();
-      this.saveState();
+    if (this.currentDocument.fields.length === 0) {
+      this.notificationService.info('Aucun élément à supprimer.');
+      return;
     }
+    this.currentDocument.fields = [];
+    this.currentDocument.updatedAt = new Date();
+    this.saveState();
+    this.notificationService.success('Tous les éléments ont été supprimés.');
   }
 
   // ─── Utilitaires ─────────────────────────────────────────────────────────
@@ -716,6 +755,7 @@ export class AppComponent implements OnInit {
 
   onCloseSignaturePad(): void {
     this.showSignaturePad = false;
+    this.pendingSignaturePosition = null;
   }
 
   onCloseSavedDocuments(): void {

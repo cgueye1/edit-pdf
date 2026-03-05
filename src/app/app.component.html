@@ -142,7 +142,7 @@
             [scale]="scale" [activeTool]="activeTool" (pageClick)="onPageClick($event)"
             (fieldAdded)="onFieldUpdated($event)" (fieldUpdated)="onFieldUpdated($event)"
             (fieldSelected)="onFieldSelected($event)" (fieldTextEdit)="onFieldTextEdit($event)"
-            (pageRendered)="onPageRendered($event)">
+            (fieldDeleted)="onFieldDeleted($event)" (pageRendered)="onPageRendered($event)">
           </app-pdf-viewer>
 
           <app-drawing-canvas
@@ -215,6 +215,9 @@
     [pdfUrl]="previewPdfUrl"
     (closed)="closePdfPreviewModal()">
   </app-pdf-preview-modal>
+
+  <!-- Container de notifications -->
+  <app-notification-container></app-notification-container>
 
   <!-- Pied de page -->
   <footer class="app-footer">

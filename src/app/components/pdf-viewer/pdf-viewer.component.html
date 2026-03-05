@@ -6,8 +6,8 @@
   </div>
 
   <!-- Conteneur PDF -->
-  <div #pdfContainer class="pdf-container">
-    <canvas #pdfCanvas class="pdf-canvas" (click)="onCanvasClick($event)" [class.has-active-tool]="activeTool">
+  <div #pdfContainer class="pdf-container" [class.eraser-tool]="activeTool === 'eraser'">
+    <canvas #pdfCanvas class="pdf-canvas" (click)="onCanvasClick($event)" [class.has-active-tool]="activeTool" [class.eraser-tool]="activeTool === 'eraser'">
     </canvas>
 
     <!-- Champs superposés -->
@@ -15,17 +15,15 @@
       <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" [attr.data-field-id]="field.id"
         [ngStyle]="getFieldStyle(field)" [appDraggable]="activeTool === 'select' || !activeTool" [dragData]="field"
         (dragStart)="onFieldDragStart(field, $event)" (dragging)="onFieldDragging($event)"
-        (dragEnd)="onFieldDragEnd($event)" [appResizable]="selectedField?.id === field.id" [resizeData]="field"
+        (dragEnd)="onFieldDragEnd($event)" [appResizable]="(field.type === 'image' || field.type === 'signature') && selectedField?.id === field.id" [resizeData]="field"
         [minWidth]="field.type === 'checkbox' ? 15 : 50" [minHeight]="field.type === 'checkbox' ? 15 : 30" (resizeStart)="onFieldResizeStart(field)" (resizing)="onFieldResizing($event)"
         (resizeEnd)="onFieldResizeEnd($event)" (click)="onFieldContainerClick(field, $event)"
-        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id">
+        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id">
 
         <!-- Texte -->
-        <div *ngIf="field.type === 'text'" class="text-field">
-          <div *ngIf="editingField?.id !== field.id" (click)="startEditingField(field)" class="text-display"
-            [class.empty]="!field.value">
-            <span *ngIf="field.value">{{ field.value }}</span>
-            <span *ngIf="!field.value" class="placeholder">Cliquez pour éditer</span>
+        <div *ngIf="field.type === 'text' && (field.value || editingField?.id === field.id)" class="text-field">
+          <div *ngIf="editingField?.id !== field.id && field.value" (click)="startEditingField(field)" class="text-display">
+            <span>{{ field.value }}</span>
           </div>
           <input *ngIf="editingField?.id === field.id" [id]="'text-edit-' + field.id" type="text"
             [value]="field.value || ''" 
@@ -38,7 +36,7 @@
             (blur)="onTextEditBlur(field, $any($event.target).value)"
             (keydown)="onTextEditKeydown(field, $event, $any($event.target).value)"
             (input)="onTextInput(field, $any($event.target).value)" class="text-edit-input"
-            (click)="$event.stopPropagation()" autocomplete="off">
+            (click)="$event.stopPropagation()" autocomplete="off" placeholder="Tapez votre texte...">
         </div>
 
         <!-- Case à cocher -->
@@ -95,29 +93,20 @@
 
         <!-- Date field -->
         <div *ngIf="field.type === 'date'" class="date-field">
-          <div *ngIf="editingField?.id !== field.id" (click)="startEditingField(field)" class="date-display"
-            [class.empty]="!field.value">
-            <span *ngIf="field.value">{{ field.value }}</span>
-            <span *ngIf="!field.value" class="placeholder">Date</span>
-          </div>
-          <input *ngIf="editingField?.id === field.id" [id]="'date-edit-' + field.id" type="date"
-            [value]="field.value || ''" 
+          <input [id]="'date-edit-' + field.id" type="date"
+            [value]="getDateValue(field.value)" 
             [style.fontSize]="(field.fontSize || 14) + 'px'"
             [style.color]="field.color || '#000000'"
             [style.fontFamily]="field.fontFamily || 'Helvetica'"
             [style.fontWeight]="field.bold ? 'bold' : 'normal'"
             [style.fontStyle]="field.italic ? 'italic' : 'normal'"
             [style.textDecoration]="field.underline ? 'underline' : 'none'"
-            (blur)="onDateEditBlur(field, $any($event.target).value)"
-            (keydown)="onDateEditKeydown(field, $event)" class="date-edit-input"
-            (click)="$event.stopPropagation()" autocomplete="off">
+            (change)="onDateChange(field, $any($event.target).value)"
+            (click)="$event.stopPropagation()" 
+            class="date-input"
+            placeholder="jj/mm/aaaa">
         </div>
 
-        <!-- Bouton de suppression -->
-        <button *ngIf="selectedField?.id === field.id && !editingField" class="delete-btn"
-          (click)="deleteSelectedField(); $event.stopPropagation()" title="Supprimer (Delete)">
-          <i class="fas fa-trash"></i>
-        </button>
       </div>
     </div>
 
@@ -132,7 +121,8 @@
           'fa-image': activeTool === 'image',
           'fa-pen-fancy': activeTool === 'signature',
           'fa-calendar-alt': activeTool === 'date',
-          'fa-mouse-pointer': activeTool === 'select'
+          'fa-mouse-pointer': activeTool === 'select',
+          'fa-eraser': activeTool === 'eraser'
         }"></i>
         <span>
           {{ activeTool === 'text' ? 'Cliquez pour ajouter du texte' :
@@ -142,7 +132,8 @@
           activeTool === 'image' ? 'Cliquez pour ajouter une image' :
           activeTool === 'signature' ? 'Cliquez pour ajouter une signature' :
           activeTool === 'date' ? 'Cliquez pour ajouter la date' :
-          activeTool === 'select' ? 'Mode sélection' : '' }}
+          activeTool === 'select' ? 'Mode sélection' :
+          activeTool === 'eraser' ? 'Cliquez sur un élément pour le supprimer' : '' }}
         </span>
       </div>
     </div>

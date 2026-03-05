@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,          // <-- rendu standalone
   imports: [CommonModule, FormsModule], // <-- modules nécessaires pour ngIf, ngFor, ngModel
   templateUrl: './pdf-toolbar.component.html',
-  styleUrls: ['./pdf-toolbar.component.scss']
+  styleUrls: ['./pdf-toolbar.component.css']
 })
 export class PdfToolbarComponent {
   @Input() canUndo = false;

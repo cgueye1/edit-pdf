@@ -126,6 +126,15 @@
         <i class="fas fa-arrows-alt"></i>
         <span class="tool-label">Déplacer</span>
       </button>
+
+      <button
+        class="tool-btn tool-btn-danger"
+        [class.active]="activeTool === 'eraser'"
+        (click)="selectTool('eraser')"
+        title="Effaceur - Cliquez sur un élément pour le supprimer">
+        <i class="fas fa-eraser"></i>
+        <span class="tool-label">Effaceur</span>
+      </button>
     </div>
 
     <!-- Barre d'outils contextuelle pour le texte -->

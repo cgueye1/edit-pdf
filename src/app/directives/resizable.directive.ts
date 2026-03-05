@@ -7,6 +7,8 @@ import {
   EventEmitter,
   OnInit,
   OnDestroy,
+  OnChanges,
+  SimpleChanges,
   Renderer2,
 } from '@angular/core';
 
@@ -16,7 +18,7 @@ type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
   selector: '[appResizable]',
   standalone: true,
 })
-export class ResizableDirective implements OnInit, OnDestroy {
+export class ResizableDirective implements OnInit, OnDestroy, OnChanges {
   @Input() appResizable = true;
   @Input() resizeData: any;
   @Input() minWidth = 50;
@@ -52,6 +54,23 @@ export class ResizableDirective implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.appResizable) {
       this.createHandles();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['appResizable']) {
+      if (this.appResizable && this.handles.length === 0) {
+        this.createHandles();
+      } else if (!this.appResizable && this.handles.length > 0) {
+        this.removeHandles();
+      }
+    }
+    
+    // Afficher les poignées si l'élément devient redimensionnable
+    if (this.appResizable && this.handles.length > 0) {
+      this.showHandles();
+    } else if (!this.appResizable) {
+      this.hideHandles();
     }
   }
 
@@ -101,9 +120,12 @@ export class ResizableDirective implements OnInit, OnDestroy {
       this.handles.push(handleEl);
     });
 
-    this.renderer.listen(element, 'mouseenter', () => this.showHandles());
+    // Afficher les poignées au survol OU si l'élément est déjà redimensionnable
+    this.renderer.listen(element, 'mouseenter', () => {
+      if (this.appResizable) this.showHandles();
+    });
     this.renderer.listen(element, 'mouseleave', () => {
-      if (!this.isResizing) this.hideHandles();
+      if (!this.isResizing && !this.appResizable) this.hideHandles();
     });
   }
 
