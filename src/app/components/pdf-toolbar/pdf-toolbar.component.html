@@ -5,9 +5,9 @@
         class="tool-btn"
         [class.active]="activeTool === 'text'"
         (click)="selectTool('text')"
-        title="Machine à écrire - Cliquez n'importe où sur le PDF pour ajouter du texte">
+        title="Texte - Cliquez n'importe où sur le PDF pour ajouter du texte">
         <i class="fas fa-keyboard"></i>
-        <span class="tool-label">Machine à écrire</span>
+        <span class="tool-label">Texte</span>
       </button>
 
       <button
@@ -131,9 +131,18 @@
         class="tool-btn tool-btn-danger"
         [class.active]="activeTool === 'eraser'"
         (click)="selectTool('eraser')"
-        title="Effaceur - Cliquez sur un élément pour le supprimer">
+        title="Supprimer - Cliquez sur un élément pour le supprimer">
         <i class="fas fa-eraser"></i>
-        <span class="tool-label">Effaceur</span>
+        <span class="tool-label">Supprimer</span>
+      </button>
+
+      <button
+        class="tool-btn tool-btn-danger"
+        [class.active]="activeTool === 'mask'"
+        (click)="selectTool('mask')"
+        title="Effacer - Dessinez un rectangle pour masquer du contenu du PDF">
+        <i class="fas fa-square"></i>
+        <span class="tool-label">Effacer</span>
       </button>
     </div>
 

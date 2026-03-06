@@ -216,7 +216,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         const minWidth = field.type === 'checkbox' ? width_px : Math.max(width_px, 50);
         const minHeight = field.type === 'checkbox' ? height_px : Math.max(height_px, 30);
 
-        return {
+        const style: any = {
             position: 'absolute' as const,
             left: `${left_px}px`,
             top: `${top_px}px`,
@@ -232,6 +232,17 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             display: 'flex',
             alignItems: 'center',
         };
+        
+        // Appliquer la rotation si présente
+        if (field.rotation && field.rotation !== 0) {
+            const centerX = left_px + width_px / 2;
+            const centerY = top_px + height_px / 2;
+            style['transform'] = `rotate(${field.rotation}deg)`;
+            style['transform-origin'] = `${centerX - left_px}px ${centerY - top_px}px`;
+        }
+
+
+        return style;
     }
 
     onFieldDragStart(field: PDFField, dragData: any): void {
@@ -332,7 +343,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         }
 
         const target = event.target as HTMLElement;
-        if (target.closest('.checkbox-field')) {
+        if (target.closest('.checkbox-field') || target.closest('.mask-context-menu')) {
             return;
         }
         this.onFieldSelected(field, event);
@@ -549,5 +560,47 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             }
         }
         this.editingField = null;
+    }
+
+    // ─── Menu contextuel pour les masques ──────────────────────────────────────
+
+    getContextMenuPosition(field: PDFField): { x: number; y: number } | null {
+        if (!field || field.type !== 'mask') return null;
+        const style = this.getFieldStyle(field);
+        const leftStr = style['left'] as string || '0px';
+        const topStr = style['top'] as string || '0px';
+        const left_px = parseFloat(leftStr.replace('px', '')) || 0;
+        const top_px = parseFloat(topStr.replace('px', '')) || 0;
+        const width_px = (field.width * this.scale) || 0;
+        // Positionner le menu à droite du masque
+        return {
+            x: left_px + width_px + 10,
+            y: top_px
+        };
+    }
+
+    openMaskColorPicker(field: PDFField): void {
+        const currentColor = field.color || '#FFFFFF';
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = currentColor;
+        input.onchange = (e: Event) => {
+            const newColor = (e.target as HTMLInputElement).value;
+            const updatedField = { ...field, color: newColor };
+            this.fieldUpdated.emit(updatedField);
+        };
+        input.click();
+    }
+
+    rotateMask(field: PDFField): void {
+        const currentRotation = field.rotation || 0;
+        const newRotation = (currentRotation + 90) % 360;
+        const updatedField = { ...field, rotation: newRotation };
+        this.fieldUpdated.emit(updatedField);
+    }
+
+    deleteMask(field: PDFField): void {
+        this.fieldDeleted.emit(field);
+        this.selectedField = null;
     }
 }

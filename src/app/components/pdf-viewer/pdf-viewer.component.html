@@ -12,10 +12,12 @@
 
     <!-- Champs superposés -->
     <div class="fields-layer">
-      <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" [attr.data-field-id]="field.id"
-        [ngStyle]="getFieldStyle(field)" [appDraggable]="activeTool === 'select' || !activeTool" [dragData]="field"
+      <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" 
+        [class.mask-container]="field.type === 'mask'"
+        [attr.data-field-id]="field.id"
+        [ngStyle]="getFieldStyle(field)" [appDraggable]="activeTool !== 'eraser'" [dragData]="field"
         (dragStart)="onFieldDragStart(field, $event)" (dragging)="onFieldDragging($event)"
-        (dragEnd)="onFieldDragEnd($event)" [appResizable]="(field.type === 'image' || field.type === 'signature') && selectedField?.id === field.id" [resizeData]="field"
+        (dragEnd)="onFieldDragEnd($event)" [appResizable]="(field.type === 'image' || field.type === 'signature' || field.type === 'mask') && selectedField?.id === field.id" [resizeData]="field"
         [minWidth]="field.type === 'checkbox' ? 15 : 50" [minHeight]="field.type === 'checkbox' ? 15 : 30" (resizeStart)="onFieldResizeStart(field)" (resizing)="onFieldResizing($event)"
         (resizeEnd)="onFieldResizeEnd($event)" (click)="onFieldContainerClick(field, $event)"
         [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id">
@@ -91,12 +93,36 @@
           <img [src]="field.value" [alt]="'Signature ' + field.id">
         </div>
 
+        <!-- Mask field -->
+        <div *ngIf="field.type === 'mask'" class="mask-field" [style.background-color]="field.color || '#FFFFFF'">
+          <div class="mask-rectangle"></div>
+        </div>
+        
+        <!-- Menu contextuel pour les masques -->
+        <div *ngIf="field.type === 'mask' && selectedField?.id === field.id" 
+             class="mask-context-menu"
+             [style.left.px]="getContextMenuPosition(field)?.x"
+             [style.top.px]="getContextMenuPosition(field)?.y">
+          <button class="context-menu-item" (click)="openMaskColorPicker(field)" title="Changer la couleur">
+            <i class="fas fa-palette"></i>
+            <span>Couleur</span>
+          </button>
+          <button class="context-menu-item" (click)="rotateMask(field)" title="Pivoter">
+            <i class="fas fa-redo"></i>
+            <span>Pivoter</span>
+          </button>
+          <button class="context-menu-item context-menu-item-danger" (click)="deleteMask(field)" title="Supprimer">
+            <i class="fas fa-trash-alt"></i>
+            <span>Supprimer</span>
+          </button>
+        </div>
+
         <!-- Date field -->
         <div *ngIf="field.type === 'date'" class="date-field">
           <input [id]="'date-edit-' + field.id" type="date"
             [value]="getDateValue(field.value)" 
             [style.fontSize]="(field.fontSize || 14) + 'px'"
-            [style.color]="field.color || '#000000'"
+            [style.color]="'#000000'"
             [style.fontFamily]="field.fontFamily || 'Helvetica'"
             [style.fontWeight]="field.bold ? 'bold' : 'normal'"
             [style.fontStyle]="field.italic ? 'italic' : 'normal'"

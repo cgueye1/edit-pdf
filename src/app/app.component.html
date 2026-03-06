@@ -149,6 +149,8 @@
             *ngIf="isDrawingMode"
             [width]="pageDimensions.width * scale"
             [height]="pageDimensions.height * scale"
+            [scale]="scale"
+            [pageHeightPx]="pdfViewerPageHeight || (pageDimensions.height * scale)"
             [drawingTool]="drawingTool"
             (drawingComplete)="onDrawingComplete($event)"
             (drawingCancelled)="onDrawingCancelled()">

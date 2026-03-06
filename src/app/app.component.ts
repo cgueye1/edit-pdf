@@ -104,13 +104,14 @@ export class AppComponent implements OnInit {
 
   totalPages = 0;
   pageDimensions = { width: 0, height: 0 };
+  pdfViewerPageHeight = 0; // Hauteur du canvas PDF en pixels
   scale = 1.13;
   canUndo = false;
   canRedo = false;
 
   showThumbnails: boolean = false;
   sidebarCollapsed: boolean = false;
-  showProperties: boolean = true;
+  showProperties: boolean = false;
   private isGeneratingThumbnails: boolean = false;
   showPdfInfoModal = false;
   showPdfPreviewModal = false;
@@ -273,25 +274,15 @@ export class AppComponent implements OnInit {
       const originalBuffer = await this.pdfFile.arrayBuffer();
       const fileName = this.pdfFile.name;
 
-      const savedDoc = this.storageService.getAllDocuments().find(doc => doc.name === fileName);
-
-      if (savedDoc) {
-        this.currentDocument = {
-          ...savedDoc,
-          updatedAt: new Date(savedDoc.updatedAt),
-          createdAt: new Date(savedDoc.createdAt)
-        };
-        // Document sauvegardé trouvé
-      } else {
-        this.currentDocument = {
-          id: this.generateId(),
-          name: fileName,
-          fields: [],
-          currentPage: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
+      // Toujours créer un nouveau document vide à l'upload (ne pas charger les champs sauvegardés automatiquement)
+      this.currentDocument = {
+        id: this.generateId(),
+        name: fileName,
+        fields: [],
+        currentPage: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       // Charger dans pdf-lib seulement si nécessaire (pour l'export)
       try {
@@ -309,14 +300,12 @@ export class AppComponent implements OnInit {
       await this.generateThumbnails();
       this.showThumbnails = true;
 
-      if (savedDoc && savedDoc.fields.length > 0) {
-        // PDF chargé silencieusement
-      }
-
+      // Ne pas charger les champs sauvegardés automatiquement à l'upload
+      // L'utilisateur doit cliquer sur "Charger" pour charger les champs sauvegardés
       this.saveState();
-      } catch (error) {
-        this.notificationService.error('Erreur lors de l\'ajout de l\'image. Format non supporté ou fichier corrompu.');
-      }
+    } catch (error) {
+      this.notificationService.error('Erreur lors du chargement du PDF. Veuillez réessayer.');
+    }
   }
 
   // ─── Outils ───────────────────────────────────────────────────────────────
@@ -324,8 +313,8 @@ export class AppComponent implements OnInit {
   onToolSelected(tool: string): void {
     this.activeTool = tool;
     
-    // Activer le mode dessin pour les outils de dessin
-    if (['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle'].includes(tool)) {
+    // Activer le mode dessin pour les outils de dessin et masquage
+    if (['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle', 'mask'].includes(tool)) {
       this.isDrawingMode = true;
       this.drawingTool = tool;
     } else {
@@ -440,7 +429,7 @@ export class AppComponent implements OnInit {
             value:      dateStr,
             page:       event.page - 1,
             fontSize:   this.textProperties.fontSize || 12,
-            color:      this.textProperties.color || '#000000',
+            color:      '#000000', // Toujours noir pour les champs date
             fontFamily: this.textProperties.fontFamily || 'Helvetica',
             bold:       this.textProperties.bold || false,
             italic:     this.textProperties.italic || false,
@@ -666,6 +655,7 @@ export class AppComponent implements OnInit {
   onPageRendered(event: { page: number; width: number; height: number }): void {
     this.pageDimensions.width  = event.width  / this.scale;
     this.pageDimensions.height = event.height / this.scale;
+    this.pdfViewerPageHeight = event.height; // Garder la hauteur en pixels du canvas
   }
 
   // ─── Sauvegarde / Chargement ──────────────────────────────────────────────
@@ -778,21 +768,57 @@ export class AppComponent implements OnInit {
     this.showPdfPreviewModal = false;
   }
 
-  onDrawingComplete(dataUrl: string): void {
-    const newField: PDFField = {
-      id: `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'image',
-      x: 50,
-      y: 50,
-      width: this.pageDimensions.width - 100,
-      height: this.pageDimensions.height - 100,
-      value: dataUrl,
-      page: this.currentDocument.currentPage - 1,
-    };
-    
-    this.currentDocument.fields = [...this.currentDocument.fields, newField];
-    this.currentDocument.updatedAt = new Date();
-    this.saveState();
+  onDrawingComplete(data: string | {x: number, y: number, width: number, height: number}): void {
+    // DEBUG: Afficher ce qui est reçu
+    console.log('=== onDrawingComplete ===');
+    console.log('Result type:', typeof data);
+    console.log('Result:', data);
+    if (this.drawingTool === 'mask' && typeof data === 'object') {
+      // DEBUG: Afficher les valeurs reçues
+      console.log('=== Création du champ MASQUE ===');
+      console.log('data.x:', data.x);
+      console.log('data.y:', data.y);
+      console.log('data.width:', data.width);
+      console.log('data.height:', data.height);
+      console.log('pageDimensions:', this.pageDimensions);
+      console.log('scale:', this.scale);
+      
+      // Créer un champ de masquage avec les coordonnées (blanc par défaut)
+      const newField: PDFField = {
+        id: `mask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'mask',
+        x: data.x,
+        y: data.y,
+        width: data.width,
+        height: data.height,
+        value: '',
+        color: '#FFFFFF', // Blanc par défaut
+        page: this.currentDocument.currentPage - 1,
+      };
+      
+      console.log('newField créé:', newField);
+      console.log('================================');
+      
+      this.currentDocument.fields = [...this.currentDocument.fields, newField];
+      this.currentDocument.updatedAt = new Date();
+      this.saveState();
+    } else if (typeof data === 'string') {
+      // Pour les autres outils de dessin, créer une image
+      const newField: PDFField = {
+        id: `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'image',
+        x: 50,
+        y: 50,
+        width: this.pageDimensions.width - 100,
+        height: this.pageDimensions.height - 100,
+        value: data,
+        page: this.currentDocument.currentPage - 1,
+      };
+      
+      this.currentDocument.fields = [...this.currentDocument.fields, newField];
+      this.currentDocument.updatedAt = new Date();
+      this.saveState();
+    }
     
     this.isDrawingMode = false;
     this.drawingTool = null;

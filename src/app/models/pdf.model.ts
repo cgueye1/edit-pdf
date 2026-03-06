@@ -1,6 +1,6 @@
 export interface PDFField {
   id: string;
-  type: 'text' | 'checkbox' | 'signature' | 'image' | 'input' | 'textarea' | 'date' | 'number' | 'email';
+  type: 'text' | 'checkbox' | 'signature' | 'image' | 'input' | 'textarea' | 'date' | 'number' | 'email' | 'mask';
   x: number;
   y: number;
   width: number;

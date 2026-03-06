@@ -356,6 +356,25 @@ export class PdfService {
         break;
       }
 
+      case 'mask': {
+        // Dessiner un rectangle blanc pour masquer le contenu (comme files-editor.com)
+        // La couleur peut être personnalisée via field.color (défaut: blanc)
+        const maskColor = field.color || '#FFFFFF';
+        const rgbColor = this.hexToRgb(maskColor);
+        
+        // Dessiner le rectangle (la rotation est gérée dans le viewer HTML uniquement)
+        page.drawRectangle({
+          x: field.x,
+          y: field.y,
+          width: field.width,
+          height: field.height,
+          color: rgbColor,
+          borderColor: rgbColor,
+          borderWidth: 0,
+        });
+        break;
+      }
+
       case 'image':
       case 'signature': {
         const dataUrl = field.value as string;

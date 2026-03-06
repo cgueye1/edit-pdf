@@ -92,10 +92,32 @@ border: none;
     opacity: 1;
     transform: scale(1);
 
-    &:hover:not(.editing):not(.dragging) {
+    &:hover:not(.editing):not(.dragging):not(.mask-container) {
       outline: 2px dashed #0d6efd;
       outline-offset: 2px;
       transition: outline 0.15s ease;
+    }
+    
+    /* Masquer toutes les bordures pour les masques */
+    &.mask-container {
+      outline: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+    
+    &.mask-container:hover {
+      outline: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+    
+    &.mask-container.selected {
+      outline: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
     }
 
     /* Style spécial pour l'outil effaceur */
@@ -417,6 +439,78 @@ caret-color: #3182ce !important;
   display: block;
 }
 
+/* Champ masquage - rectangle blanc pour masquer le contenu (comme files-editor.com) */
+.mask-field {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF; /* Blanc par défaut pour masquer le contenu */
+  border: none !important;
+  box-sizing: border-box;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.mask-rectangle {
+  width: 100%;
+  height: 100%;
+  background: inherit; /* Hérite de la couleur du parent (field.color) */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Menu contextuel pour les masques */
+.mask-context-menu {
+  position: absolute;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  z-index: 1000;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.context-menu-item:hover {
+  background: #f0f0f0;
+}
+
+.context-menu-item i {
+  width: 18px;
+  color: #666;
+}
+
+.context-menu-item-danger {
+  color: #e53e3e;
+}
+
+.context-menu-item-danger:hover {
+  background: #fee;
+}
+
+.context-menu-item-danger i {
+  color: #e53e3e;
+}
+
 /* Champ date - style comme un vrai input date */
 .date-field {
   position: relative;
@@ -435,6 +529,7 @@ caret-color: #3182ce !important;
   background: white;
   cursor: pointer;
   font-family: inherit;
+  color: #000000 !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
@@ -445,6 +540,7 @@ caret-color: #3182ce !important;
     outline: none;
     border-color: #3182ce;
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+    color: #000000 !important;
   }
 
   /* Style pour le calendrier natif */
