@@ -7,7 +7,7 @@ import {
   OnInit,
   Input,
   Output,
-  EventEmitter
+  EventEmitter,
 } from '@angular/core';
 import { PDFField, PDFDocumentState } from './models/pdf.model';
 import { PdfService } from './services/pdf.service';
@@ -26,8 +26,10 @@ import { DrawingCanvasComponent } from './components/drawing-canvas/drawing-canv
 import { NotificationContainerComponent } from './components/notification-container/notification-container.component';
 import { NotificationService } from './services/notification.service';
 import * as pdfjs from 'pdfjs-dist';
-import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.component";
-
+import { PagesSidebarComponent } from './components/pages-sidebar/pages-sidebar.component';
+import { ActivatedRoute } from '@angular/router';
+import * as CryptoJS from 'crypto-js';
+import { DocsService } from './services/DocsService';
 
 @Component({
   selector: 'app-root',
@@ -47,10 +49,11 @@ import {PagesSidebarComponent} from "./components/pages-sidebar/pages-sidebar.co
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
-  standalone: true
+  standalone: true,
 })
 export class AppComponent implements OnInit {
-  title = 'PDF Editor Advanced';
+  private secretKey = 'innov-impact-secret-key';
+  title = 'Solimus sign';
   Math = Math;
 
   @Input() pages: number[] = [];
@@ -61,7 +64,9 @@ export class AppComponent implements OnInit {
   @Output() pageSelected = new EventEmitter<number>();
   @Output() close = new EventEmitter<void>();
 
-  @ViewChildren('thumbCanvas') thumbCanvases!: QueryList<ElementRef<HTMLCanvasElement>>;
+  @ViewChildren('thumbCanvas') thumbCanvases!: QueryList<
+    ElementRef<HTMLCanvasElement>
+  >;
 
   closeSidebar() {
     this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -87,7 +92,8 @@ export class AppComponent implements OnInit {
 
   activeTool: string | null = null;
   showSignaturePad = false;
-  pendingSignaturePosition: { x: number; y: number; page: number } | null = null;
+  pendingSignaturePosition: { x: number; y: number; page: number } | null =
+    null;
   showSavedDocuments = false;
   selectedField: PDFField | null = null;
   textProperties = {
@@ -117,21 +123,21 @@ export class AppComponent implements OnInit {
   previewPdfUrl: string = '';
   isDrawingMode = false;
   drawingTool: string | null = null;
+  docId: number = 0;
+  recivedData: any;
 
-
-
-
-
-// Optionnel : écouter le resize
-//   @HostListener('window:resize', ['$event'])
-//   onResize(event) {
-//     this.isMobile = window.innerWidth <= 992;
-//   }
+  // Optionnel : écouter le resize
+  //   @HostListener('window:resize', ['$event'])
+  //   onResize(event) {
+  //     this.isMobile = window.innerWidth <= 992;
+  //   }
   constructor(
+    private route: ActivatedRoute,
     private pdfService: PdfService,
     public historyService: HistoryService,
     private storageService: StorageService,
     private notificationService: NotificationService,
+    private docsService: DocsService,
   ) {
     pdfjs.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
   }
@@ -150,13 +156,15 @@ export class AppComponent implements OnInit {
     if (!this.pageDimensions.width || !this.pageDimensions.height) return;
 
     // Calcul simple : adapter à la largeur disponible (moins marges)
-    const containerWidth = this.pdfViewerWrapper?.nativeElement?.clientWidth || window.innerWidth * 0.9;
+    const containerWidth =
+      this.pdfViewerWrapper?.nativeElement?.clientWidth ||
+      window.innerWidth * 0.9;
     const newScale = (containerWidth - 80) / this.pageDimensions.width; // 80px de marge
 
     this.scale = Math.max(0.5, Math.min(newScale, 1.5)); // entre 50% et 150%
   }
 
-// Optionnel : injecter l’élément pour fitToScreen
+  // Optionnel : injecter l’élément pour fitToScreen
   @ViewChild('pdfViewerWrapper') pdfViewerWrapper!: ElementRef;
 
   ngAfterViewInit() {
@@ -166,17 +174,16 @@ export class AppComponent implements OnInit {
       }
     });
   }
-// Dans AppComponent
+  // Dans AppComponent
 
-
-
-// Appel cette fonction après avoir chargé le PDF et connu totalPages
+  // Appel cette fonction après avoir chargé le PDF et connu totalPages
   async generateThumbnails(): Promise<void> {
-    if (!this.pdfData || this.totalPages === 0 || this.isGeneratingThumbnails) return;
+    if (!this.pdfData || this.totalPages === 0 || this.isGeneratingThumbnails)
+      return;
 
     this.isGeneratingThumbnails = true;
     this.pages = Array.from({ length: this.totalPages }, (_, i) => i + 1);
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
 
     try {
       const thumbnailData = this.pdfData.slice(0);
@@ -207,16 +214,86 @@ export class AppComponent implements OnInit {
     }
   }
 
-
   // ─── Lifecycle ────────────────────────────────────────────────────────────
+  async loadPdfFromUrl(url: string) {
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error('HTTP error ' + response.status);
+      }
+
+      const blob = await response.blob();
+
+      this.pdfFile = new File([blob], 'document.pdf', {
+        type: 'application/pdf',
+      });
+
+      await this.loadPdf();
+    } catch (error) {
+      console.error(error);
+      this.notificationService.error(
+        "Impossible de charger le PDF depuis l'URL",
+      );
+    }
+  }
+
+  decryptData(encrypted: string): any {
+    const decoded = decodeURIComponent(encrypted);
+
+    const bytes = CryptoJS.AES.decrypt(decoded, this.secretKey);
+
+    const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+
+    return JSON.parse(decryptedString);
+  }
+  sendSignedDocument(file: File) {
+    this.docsService.uploadSignedPdf(this.docId, file).subscribe({
+      next: (res) => {
+        console.log('Upload réussi', res);
+
+        // retour vers solimus
+        const url = `https://solimus.sn/#/gestion-vente-vefa/${this.recivedData.parentId}/detail-bien/${this.recivedData.propertyId}/detail-lot?action=DOCS`;
+        console.log(url);
+
+        // Ouvrir dans le même onglet
+        window.open(url, '_self');
+      },
+      error: (err) => {
+        console.error('Erreur upload', err);
+      },
+    });
+  }
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      const encryptedParam = params['pdfurl'];
+
+      if (encryptedParam) {
+        try {
+          const data = this.decryptData(encryptedParam);
+          this.recivedData = data;
+
+          console.log('JSON récupéré :', data);
+          this.docId = data.id;
+
+          this.loadPdfFromUrl(
+            'https://solimus.sn:8082/api/files/' + data.initPdf,
+          );
+          // tu peux utiliser les données ici
+        } catch (error) {
+          console.error('Erreur de déchiffrement', error);
+        }
+      }
+    });
+
     this.historyService.loadFromLocalStorage();
 
     const documents = this.storageService.getAllDocuments();
     if (documents.length > 0) {
       const lastDocument = documents.sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       )[0];
       // Charger automatiquement le dernier document sans confirmation
       if (lastDocument) {
@@ -239,7 +316,7 @@ export class AppComponent implements OnInit {
       await this.pdfService.createBlankPdf(595, 842);
 
       const pdfBytes = await this.pdfService.getPdfBytes();
-      
+
       this.currentDocument = {
         id: this.generateId(),
         name: 'Nouveau document PDF',
@@ -258,7 +335,9 @@ export class AppComponent implements OnInit {
       await this.generateThumbnails();
       this.saveState();
     } catch (error) {
-      this.notificationService.error('Erreur lors de la création du PDF vierge.');
+      this.notificationService.error(
+        'Erreur lors de la création du PDF vierge.',
+      );
     }
   }
 
@@ -273,13 +352,15 @@ export class AppComponent implements OnInit {
       const originalBuffer = await this.pdfFile.arrayBuffer();
       const fileName = this.pdfFile.name;
 
-      const savedDoc = this.storageService.getAllDocuments().find(doc => doc.name === fileName);
+      const savedDoc = this.storageService
+        .getAllDocuments()
+        .find((doc) => doc.name === fileName);
 
       if (savedDoc) {
         this.currentDocument = {
           ...savedDoc,
           updatedAt: new Date(savedDoc.updatedAt),
-          createdAt: new Date(savedDoc.createdAt)
+          createdAt: new Date(savedDoc.createdAt),
         };
         // Document sauvegardé trouvé
       } else {
@@ -301,7 +382,9 @@ export class AppComponent implements OnInit {
       }
 
       this.pdfData = originalBuffer.slice(0);
-      const fileCopy = new File([originalBuffer], fileName, { type: this.pdfFile.type });
+      const fileCopy = new File([originalBuffer], fileName, {
+        type: this.pdfFile.type,
+      });
       this.pdfUrl = URL.createObjectURL(fileCopy);
 
       this.totalPages = await this.pdfService.getPageCount();
@@ -314,18 +397,24 @@ export class AppComponent implements OnInit {
       }
 
       this.saveState();
-      } catch (error) {
-        this.notificationService.error('Erreur lors de l\'ajout de l\'image. Format non supporté ou fichier corrompu.');
-      }
+    } catch (error) {
+      this.notificationService.error(
+        "Erreur lors de l'ajout de l'image. Format non supporté ou fichier corrompu.",
+      );
+    }
   }
 
   // ─── Outils ───────────────────────────────────────────────────────────────
 
   onToolSelected(tool: string): void {
     this.activeTool = tool;
-    
+
     // Activer le mode dessin pour les outils de dessin
-    if (['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle'].includes(tool)) {
+    if (
+      ['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle'].includes(
+        tool,
+      )
+    ) {
       this.isDrawingMode = true;
       this.drawingTool = tool;
     } else {
@@ -334,7 +423,11 @@ export class AppComponent implements OnInit {
     }
   }
 
-  async onPageClick(event: { x: number; y: number; page: number }): Promise<void> {
+  async onPageClick(event: {
+    x: number;
+    y: number;
+    page: number;
+  }): Promise<void> {
     if (!this.activeTool) return;
 
     // Mode effaceur - géré dans onFieldDeleted
@@ -354,22 +447,25 @@ export class AppComponent implements OnInit {
         case 'text':
           const fieldHeight = (this.textProperties.fontSize || 12) * 1.5;
           newField = {
-            id:         `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            type:       'text',
-            x:          event.x,
-            y:          event.y - fieldHeight / 2,
-            width:      150,
-            height:     fieldHeight,
-            value:      '',
-            page:       event.page - 1,
-            fontSize:   this.textProperties.fontSize || 12,
-            color:      this.textProperties.color || '#000000',
+            id: `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'text',
+            x: event.x,
+            y: event.y - fieldHeight / 2,
+            width: 150,
+            height: fieldHeight,
+            value: '',
+            page: event.page - 1,
+            fontSize: this.textProperties.fontSize || 12,
+            color: this.textProperties.color || '#000000',
             fontFamily: this.textProperties.fontFamily || 'Helvetica',
-            bold:       this.textProperties.bold || false,
-            italic:     this.textProperties.italic || false,
-            underline:  this.textProperties.underline || false,
+            bold: this.textProperties.bold || false,
+            italic: this.textProperties.italic || false,
+            underline: this.textProperties.underline || false,
           };
-          this.currentDocument.fields = [...this.currentDocument.fields, newField];
+          this.currentDocument.fields = [
+            ...this.currentDocument.fields,
+            newField,
+          ];
           this.currentDocument.updatedAt = new Date();
           this.saveState();
           return;
@@ -385,29 +481,51 @@ export class AppComponent implements OnInit {
           // Donc : field.y + field.height / 2 = event.y
           // Donc : field.y = event.y - field.height / 2
           // Réduire la taille : utiliser 60% de la taille de police ou 10 par défaut
-          const checkboxSize = Math.max(10, Math.round((this.textProperties.fontSize || 12) * 0.6));
+          const checkboxSize = Math.max(
+            10,
+            Math.round((this.textProperties.fontSize || 12) * 0.6),
+          );
           // Le conteneur a la même taille que la checkbox
           newField = await this.pdfService.addCheckbox(
-            true, event.x, event.y - checkboxSize / 2, event.page - 1, checkboxSize, { fontSize: checkboxSize },
+            true,
+            event.x,
+            event.y - checkboxSize / 2,
+            event.page - 1,
+            checkboxSize,
+            { fontSize: checkboxSize },
           );
           break;
 
         case 'input': {
-          const label       = prompt('Label du champ (optionnel):', '') || undefined;
-          const placeholder = prompt('Placeholder (optionnel):', '') || undefined;
+          const label = prompt('Label du champ (optionnel):', '') || undefined;
+          const placeholder =
+            prompt('Placeholder (optionnel):', '') || undefined;
           newField = await this.pdfService.addInputField(
-            event.x, event.y, event.page - 1, 200, 20,
-            label, placeholder, this.textProperties,
+            event.x,
+            event.y,
+            event.page - 1,
+            200,
+            20,
+            label,
+            placeholder,
+            this.textProperties,
           );
           break;
         }
 
         case 'textarea': {
-          const label       = prompt('Label du champ (optionnel):', '') || undefined;
-          const placeholder = prompt('Placeholder (optionnel):', '') || undefined;
+          const label = prompt('Label du champ (optionnel):', '') || undefined;
+          const placeholder =
+            prompt('Placeholder (optionnel):', '') || undefined;
           newField = await this.pdfService.addTextareaField(
-            event.x, event.y, event.page - 1, 300, 80,
-            label, placeholder, this.textProperties,
+            event.x,
+            event.y,
+            event.page - 1,
+            300,
+            80,
+            label,
+            placeholder,
+            this.textProperties,
           );
           break;
         }
@@ -418,7 +536,11 @@ export class AppComponent implements OnInit {
 
         case 'signature':
           // Sauvegarder la position du clic pour placer la signature
-          this.pendingSignaturePosition = { x: event.x, y: event.y, page: event.page - 1 };
+          this.pendingSignaturePosition = {
+            x: event.x,
+            y: event.y,
+            page: event.page - 1,
+          };
           this.showSignaturePad = true;
           return;
 
@@ -427,24 +549,24 @@ export class AppComponent implements OnInit {
           const dateStr = today.toLocaleDateString('fr-FR', {
             day: '2-digit',
             month: '2-digit',
-            year: 'numeric'
+            year: 'numeric',
           });
           const fieldHeight = (this.textProperties.fontSize || 12) * 1.5;
           newField = {
-            id:         `date_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            type:       'date',
-            x:          event.x,
-            y:          event.y - fieldHeight / 2,
-            width:      150,
-            height:     fieldHeight,
-            value:      dateStr,
-            page:       event.page - 1,
-            fontSize:   this.textProperties.fontSize || 12,
-            color:      this.textProperties.color || '#000000',
+            id: `date_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'date',
+            x: event.x,
+            y: event.y - fieldHeight / 2,
+            width: 150,
+            height: fieldHeight,
+            value: dateStr,
+            page: event.page - 1,
+            fontSize: this.textProperties.fontSize || 12,
+            color: this.textProperties.color || '#000000',
             fontFamily: this.textProperties.fontFamily || 'Helvetica',
-            bold:       this.textProperties.bold || false,
-            italic:     this.textProperties.italic || false,
-            underline:  this.textProperties.underline || false,
+            bold: this.textProperties.bold || false,
+            italic: this.textProperties.italic || false,
+            underline: this.textProperties.underline || false,
           };
           break;
         }
@@ -457,14 +579,16 @@ export class AppComponent implements OnInit {
       this.currentDocument.updatedAt = new Date();
       this.saveState();
     } catch (error) {
-      this.notificationService.error('Erreur lors de l\'ajout du champ. Veuillez réessayer.');
+      this.notificationService.error(
+        "Erreur lors de l'ajout du champ. Veuillez réessayer.",
+      );
     }
   }
 
   async addImageField(x: number, y: number, pageIndex: number): Promise<void> {
-    const input   = document.createElement('input');
-    input.type    = 'file';
-    input.accept  = 'image/png,image/jpeg,image/jpg';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/jpg';
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -473,18 +597,28 @@ export class AppComponent implements OnInit {
         reader.onload = async (ev: ProgressEvent<FileReader>) => {
           const dataUrl = ev.target?.result as string;
           if (!dataUrl) return;
-          const img  = new Image();
+          const img = new Image();
           img.onload = async () => {
-            const ratio  = Math.min(300 / img.width, 300 / img.height, 1);
-            const width  = img.width  * ratio;
+            const ratio = Math.min(300 / img.width, 300 / img.height, 1);
+            const width = img.width * ratio;
             const height = img.height * ratio;
             // x, y sont en points PDF depuis le bas de la page (position du clic)
             // field.y doit représenter le coin BAS du champ (comme dans getFieldStyle)
             // Pour que l'image soit centrée visuellement à la position du clic,
             // on place le coin BAS du champ légèrement en dessous du point de clic
             const imageY = y - height / 2; // Coin BAS du champ pour que le centre soit à y
-            const newField = await this.pdfService.addImage(dataUrl, x, imageY, pageIndex, width, height);
-            this.currentDocument.fields = [...this.currentDocument.fields, newField];
+            const newField = await this.pdfService.addImage(
+              dataUrl,
+              x,
+              imageY,
+              pageIndex,
+              width,
+              height,
+            );
+            this.currentDocument.fields = [
+              ...this.currentDocument.fields,
+              newField,
+            ];
             this.currentDocument.updatedAt = new Date();
             this.saveState();
           };
@@ -492,7 +626,9 @@ export class AppComponent implements OnInit {
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        this.notificationService.error('Erreur lors de l\'ajout de l\'image. Format non supporté ou fichier corrompu.');
+        this.notificationService.error(
+          "Erreur lors de l'ajout de l'image. Format non supporté ou fichier corrompu.",
+        );
       }
     };
     input.click();
@@ -501,7 +637,9 @@ export class AppComponent implements OnInit {
   // ─── Mise à jour des champs ───────────────────────────────────────────────
 
   onFieldTextEdit(event: { field: PDFField; newText: string }): void {
-    const index = this.currentDocument.fields.findIndex(f => f.id === event.field.id);
+    const index = this.currentDocument.fields.findIndex(
+      (f) => f.id === event.field.id,
+    );
     if (index !== -1) {
       // Mettre à jour la valeur en place (sans recréer le tableau pour garder le focus)
       this.currentDocument.fields[index] = {
@@ -514,7 +652,9 @@ export class AppComponent implements OnInit {
   }
 
   onFieldUpdated(updated: PDFField): void {
-    const index = this.currentDocument.fields.findIndex(f => f.id === updated.id);
+    const index = this.currentDocument.fields.findIndex(
+      (f) => f.id === updated.id,
+    );
     if (index !== -1) {
       this.currentDocument.fields[index] = updated;
       this.currentDocument.updatedAt = new Date();
@@ -529,7 +669,9 @@ export class AppComponent implements OnInit {
   }
 
   onFieldPropertiesUpdated(field: PDFField): void {
-    const index = this.currentDocument.fields.findIndex(f => f.id === field.id);
+    const index = this.currentDocument.fields.findIndex(
+      (f) => f.id === field.id,
+    );
     if (index !== -1) {
       this.currentDocument.fields[index] = field;
       this.currentDocument.updatedAt = new Date();
@@ -540,13 +682,16 @@ export class AppComponent implements OnInit {
   onFieldDeleted(field: PDFField | string): void {
     // Gérer les deux cas : PDFField ou string (ID)
     const fieldId = typeof field === 'string' ? field : field.id;
-    const fieldToDelete = typeof field === 'string' 
-      ? this.currentDocument.fields.find(f => f.id === fieldId)
-      : field;
-    
+    const fieldToDelete =
+      typeof field === 'string'
+        ? this.currentDocument.fields.find((f) => f.id === fieldId)
+        : field;
+
     if (!fieldToDelete) return;
-    
-    this.currentDocument.fields = this.currentDocument.fields.filter(f => f.id !== fieldId);
+
+    this.currentDocument.fields = this.currentDocument.fields.filter(
+      (f) => f.id !== fieldId,
+    );
     this.currentDocument.updatedAt = new Date();
     this.selectedField = null;
     this.saveState();
@@ -555,21 +700,21 @@ export class AppComponent implements OnInit {
 
   onSignatureSaved(signatureDataUrl: string): void {
     // Utiliser la position sauvegardée du clic ou une position par défaut
-    const position = this.pendingSignaturePosition || { 
-      x: 100, 
-      y: 100, 
-      page: this.currentDocument.currentPage - 1 
+    const position = this.pendingSignaturePosition || {
+      x: 100,
+      y: 100,
+      page: this.currentDocument.currentPage - 1,
     };
-    
+
     const newField: PDFField = {
-      id:     `signature_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type:   'signature',
-      x:      position.x,
-      y:      position.y - 40, // Centrer verticalement (hauteur/2)
-      width:  200,
+      id: `signature_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'signature',
+      x: position.x,
+      y: position.y - 40, // Centrer verticalement (hauteur/2)
+      width: 200,
       height: 80,
-      value:  signatureDataUrl,
-      page:   position.page,
+      value: signatureDataUrl,
+      page: position.page,
     };
     this.currentDocument.fields = [...this.currentDocument.fields, newField];
     this.currentDocument.updatedAt = new Date();
@@ -583,39 +728,57 @@ export class AppComponent implements OnInit {
 
   async onExport(): Promise<void> {
     if (this.currentDocument.fields.length === 0) {
-      this.notificationService.warning('Aucun champ à exporter. Ajoutez des éléments avant d\'exporter.');
+      this.notificationService.warning(
+        "Aucun champ à exporter. Ajoutez des éléments avant d'exporter.",
+      );
       return;
     }
+
     try {
-      // exportPdf() recharge le PDF original propre et dessine tous les champs
-      // avec leurs coordonnées actuelles — c'est la seule source de vérité
-      await this.pdfService.exportPdf(
+      // 1️⃣ Export du PDF en Blob
+      const blob: Blob = await this.pdfService.exportPdf(
         this.currentDocument.fields,
         `${this.currentDocument.name}.pdf`,
-        false
+        false, // false = pas de preview
       );
+
       this.notificationService.success('PDF exporté avec succès !');
+
+      // 2️⃣ Convertir le Blob en File pour l'upload
+      const file = new File([blob], `${this.currentDocument.name}.pdf`, {
+        type: 'application/pdf',
+      });
+
+      // 3️⃣ Envoyer le PDF au backend via ton service
+      this.sendSignedDocument(file);
     } catch (error) {
-      this.notificationService.error('Erreur lors de l\'export du PDF. Veuillez réessayer.');
+      this.notificationService.error(
+        "Erreur lors de l'export du PDF. Veuillez réessayer.",
+      );
+      console.error(error);
     }
   }
 
   async onPreview(): Promise<void> {
     if (this.currentDocument.fields.length === 0) {
-      this.notificationService.info('Aucun champ à prévisualiser. Ajoutez des éléments pour voir l\'aperçu.');
+      this.notificationService.info(
+        "Aucun champ à prévisualiser. Ajoutez des éléments pour voir l'aperçu.",
+      );
       return;
     }
     try {
       const blob = await this.pdfService.exportPdf(
         this.currentDocument.fields,
         `${this.currentDocument.name}.pdf`,
-        true
+        true,
       );
 
       this.previewPdfUrl = URL.createObjectURL(blob);
       this.showPdfPreviewModal = true;
     } catch (error) {
-      this.notificationService.error('Erreur lors de la prévisualisation du PDF.');
+      this.notificationService.error(
+        'Erreur lors de la prévisualisation du PDF.',
+      );
     }
   }
 
@@ -630,8 +793,8 @@ export class AppComponent implements OnInit {
 
   onUndo(): void {
     const state = this.historyService.undo();
-    if (state) { 
-      this.currentDocument = state; 
+    if (state) {
+      this.currentDocument = state;
       this.updateHistoryButtons();
       this.notificationService.info('Action annulée.');
     } else {
@@ -641,8 +804,8 @@ export class AppComponent implements OnInit {
 
   onRedo(): void {
     const state = this.historyService.redo();
-    if (state) { 
-      this.currentDocument = state; 
+    if (state) {
+      this.currentDocument = state;
       this.updateHistoryButtons();
       this.notificationService.info('Action rétablie.');
     } else {
@@ -659,12 +822,12 @@ export class AppComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentDocument.currentPage = page;
-    this.currentDocument.updatedAt   = new Date();
+    this.currentDocument.updatedAt = new Date();
     this.saveState();
   }
 
   onPageRendered(event: { page: number; width: number; height: number }): void {
-    this.pageDimensions.width  = event.width  / this.scale;
+    this.pageDimensions.width = event.width / this.scale;
     this.pageDimensions.height = event.height / this.scale;
   }
 
@@ -690,25 +853,29 @@ export class AppComponent implements OnInit {
 
   async loadSavedDocument(doc: PDFDocumentState): Promise<void> {
     // Chargement du document
-    
+
     this.currentDocument = {
       ...doc,
       updatedAt: new Date(doc.updatedAt),
-      createdAt: new Date(doc.createdAt)
+      createdAt: new Date(doc.createdAt),
     };
 
     if (this.pdfUrl && this.pdfData && this.pdfFile?.name === doc.name) {
       // PDF correspondant déjà chargé
       this.updateHistoryButtons();
-      this.notificationService.success(`Document "${doc.name}" chargé avec ${doc.fields.length} champ(s).`);
+      this.notificationService.success(
+        `Document "${doc.name}" chargé avec ${doc.fields.length} champ(s).`,
+      );
     } else {
       this.showSavedDocuments = false;
-      
+
       setTimeout(() => {
         const message = `📄 Sélectionnez le fichier PDF "${doc.name}" pour voir vos ${doc.fields.length} champs.`;
         // Message silencieux
-        
-        const fileInput = window.document.getElementById('pdfInput') as HTMLInputElement;
+
+        const fileInput = window.document.getElementById(
+          'pdfInput',
+        ) as HTMLInputElement;
         if (fileInput) {
           fileInput.click();
         }
@@ -735,10 +902,15 @@ export class AppComponent implements OnInit {
 
   onTextPropertiesChange(properties: any): void {
     this.textProperties = { ...this.textProperties, ...properties };
-    
+
     // Appliquer immédiatement au champ sélectionné s'il est en cours d'édition
-    if (this.selectedField && (this.selectedField.type === 'text' || this.selectedField.type === 'date')) {
-      const index = this.currentDocument.fields.findIndex(f => f.id === this.selectedField!.id);
+    if (
+      this.selectedField &&
+      (this.selectedField.type === 'text' || this.selectedField.type === 'date')
+    ) {
+      const index = this.currentDocument.fields.findIndex(
+        (f) => f.id === this.selectedField!.id,
+      );
       if (index !== -1) {
         this.currentDocument.fields[index] = {
           ...this.currentDocument.fields[index],
@@ -789,11 +961,11 @@ export class AppComponent implements OnInit {
       value: dataUrl,
       page: this.currentDocument.currentPage - 1,
     };
-    
+
     this.currentDocument.fields = [...this.currentDocument.fields, newField];
     this.currentDocument.updatedAt = new Date();
     this.saveState();
-    
+
     this.isDrawingMode = false;
     this.drawingTool = null;
     this.activeTool = null;

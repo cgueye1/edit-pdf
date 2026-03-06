@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AppComponent } from './app.component';
 
 export const routes: Routes = [
   {
@@ -6,7 +7,16 @@ export const routes: Routes = [
     redirectTo: '/admin',
     pathMatch: 'full',
   },
-  {
+   {
+    path: 'admin',
+    component: AppComponent
+  }
+];
+
+
+
+
+/*{
     path: 'admin',
     loadComponent: () => import('./components/admin/admin.component').then(m => m.AdminComponent),
   },
@@ -25,5 +35,4 @@ export const routes: Routes = [
   {
     path: 'editor',
     loadComponent: () => import('./app.component').then(m => m.AppComponent),
-  },
-];
+  },*/
