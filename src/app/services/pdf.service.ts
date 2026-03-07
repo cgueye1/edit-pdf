@@ -398,6 +398,19 @@ export class PdfService {
         }
         break;
       }
+
+      case 'redact': {
+        // Dessiner un rectangle blanc pour masquer le contenu
+        page.drawRectangle({
+          x: field.x,
+          y: field.y,
+          width: field.width,
+          height: field.height,
+          color: rgb(1, 1, 1), // Blanc
+          borderColor: rgb(1, 1, 1),
+        });
+        break;
+      }
     }
   }
 

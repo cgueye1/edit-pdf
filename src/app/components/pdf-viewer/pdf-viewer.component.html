@@ -5,7 +5,7 @@
     <p>Chargement de la page {{ currentPage }}...</p>
   </div>
 
-  <!-- Conteneur PDF -->
+    <!-- Conteneur PDF -->
   <div #pdfContainer class="pdf-container" [class.eraser-tool]="activeTool === 'eraser'">
     <canvas #pdfCanvas class="pdf-canvas" (click)="onCanvasClick($event)" [class.has-active-tool]="activeTool" [class.eraser-tool]="activeTool === 'eraser'">
     </canvas>
@@ -13,12 +13,12 @@
     <!-- Champs superposés -->
     <div class="fields-layer">
       <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" [attr.data-field-id]="field.id"
-        [ngStyle]="getFieldStyle(field)" [appDraggable]="activeTool === 'select' || !activeTool" [dragData]="field"
+        [ngStyle]="getFieldStyle(field)" [appDraggable]="true" [dragData]="field"
         (dragStart)="onFieldDragStart(field, $event)" (dragging)="onFieldDragging($event)"
-        (dragEnd)="onFieldDragEnd($event)" [appResizable]="(field.type === 'image' || field.type === 'signature') && selectedField?.id === field.id" [resizeData]="field"
+        (dragEnd)="onFieldDragEnd($event)" [appResizable]="((field.type === 'image' || field.type === 'signature' || field.type === 'redact') && selectedField?.id === field.id)" [resizeData]="field"
         [minWidth]="field.type === 'checkbox' ? 15 : 50" [minHeight]="field.type === 'checkbox' ? 15 : 30" (resizeStart)="onFieldResizeStart(field)" (resizing)="onFieldResizing($event)"
         (resizeEnd)="onFieldResizeEnd($event)" (click)="onFieldContainerClick(field, $event)"
-        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id">
+        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id" [class.redact-field-container]="field.type === 'redact'">
 
         <!-- Texte -->
         <div *ngIf="field.type === 'text' && (field.value || editingField?.id === field.id)" class="text-field">
@@ -107,6 +107,9 @@
             placeholder="jj/mm/aaaa">
         </div>
 
+        <!-- Bloc de caviardage (redact) - visible seulement si l'outil effaceur est actif -->
+        <div *ngIf="field.type === 'redact'" class="redact-field" [style.display]="activeTool === 'eraser' ? 'block' : 'none'"></div>
+
       </div>
     </div>
 
@@ -133,7 +136,7 @@
           activeTool === 'signature' ? 'Cliquez pour ajouter une signature' :
           activeTool === 'date' ? 'Cliquez pour ajouter la date' :
           activeTool === 'select' ? 'Mode sélection' :
-          activeTool === 'eraser' ? 'Cliquez sur un élément pour le supprimer' : '' }}
+          activeTool === 'eraser' ? 'Dessinez un rectangle pour masquer une zone' : '' }}
         </span>
       </div>
     </div>

@@ -5,9 +5,9 @@
         class="tool-btn"
         [class.active]="activeTool === 'text'"
         (click)="selectTool('text')"
-        title="Machine à écrire - Cliquez n'importe où sur le PDF pour ajouter du texte">
+        title="Texte - Cliquez n'importe où sur le PDF pour ajouter du texte">
         <i class="fas fa-keyboard"></i>
-        <span class="tool-label">Machine à écrire</span>
+        <span class="tool-label">Texte</span>
       </button>
 
       <button
@@ -294,9 +294,7 @@
         <i class="fas fa-save"></i>
       </button>
 
-      <button class="tool-btn btn-load" (click)="onLoad()" title="Charger">
-        <i class="fas fa-folder-open"></i>
-      </button>
+
 
       <button class="tool-btn btn-preview" (click)="onPreview()" title="Aperçu PDF">
         <i class="fas fa-eye"></i>
@@ -309,7 +307,7 @@
       <button class="tool-btn btn-clear" (click)="onClear()" title="Tout effacer">
         <i class="fas fa-trash-alt"></i>
       </button>
-      
+
       <button class="tool-btn btn-more-tools" (click)="onToggleProperties()" title="More tools">
         <i class="fas fa-ellipsis-v"></i>
       </button>

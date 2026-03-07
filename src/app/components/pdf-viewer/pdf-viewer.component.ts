@@ -63,6 +63,8 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
                 this.fieldSelected.emit(null as any);
             }
         });
+
+        // Les listeners pour l'effaceur seront initialisés dans ngOnChanges
     }
 
 
@@ -96,6 +98,10 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['pdfUrl'] && this.pdfUrl) this.loadPdf();
         if ((changes['currentPage'] || changes['scale']) && this.pdfDocument) this.renderPage();
+
+        if (changes['activeTool']) {
+            this.updateEraserListeners();
+        }
 
         if (changes['fields'] && this.fields.length > 0) {
             const previousFields = changes['fields'].previousValue || [];
@@ -180,6 +186,11 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         if (this.editingField) return;
         if (!this.activeTool || !this.pdfCanvasRef) return;
 
+        // Mode effaceur - géré par setupEraserBrush
+        if (this.activeTool === 'eraser') {
+            return;
+        }
+
         const canvas = this.pdfCanvasRef.nativeElement;
         const rect = canvas.getBoundingClientRect();
 
@@ -190,6 +201,11 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         const y_pt = (this.pageHeight - clickY_px) / this.scale;
 
         this.pageClick.emit({ x: x_pt, y: y_pt, page: this.currentPage });
+    }
+
+    private updateEraserListeners(): void {
+        // L'outil effaceur utilise maintenant le drawing-canvas
+        // Pas besoin de listeners spéciaux ici
     }
 
     getFieldStyle(field: PDFField): any {
@@ -323,11 +339,23 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
     onFieldContainerClick(field: PDFField, event: MouseEvent): void {
-        // Si l'outil effaceur est actif, supprimer le champ
-        if (this.activeTool === 'eraser') {
+        // Si l'outil effaceur est actif et qu'on clique sur autre chose qu'un bloc redact, supprimer le champ
+        if (this.activeTool === 'eraser' && field.type !== 'redact') {
             event.stopPropagation();
             this.fieldDeleted.emit(field);
             this.selectedField = null;
+            return;
+        }
+
+        // Pour les masques redact, permettre la sélection normale (le drag fonctionnera)
+        if (field.type === 'redact' && this.activeTool === 'eraser') {
+            // Ne pas empêcher le drag en appelant stopPropagation trop tôt
+            // Laisser le drag se faire normalement
+            const target = event.target as HTMLElement;
+            if (target.closest('.redact-field')) {
+                // Si on clique directement sur le div redact-field, sélectionner
+                this.onFieldSelected(field, event);
+            }
             return;
         }
 

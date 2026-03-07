@@ -25,6 +25,7 @@ import { PdfPreviewModalComponent } from './components/pdf-preview-modal/pdf-pre
 import { DrawingCanvasComponent } from './components/drawing-canvas/drawing-canvas.component';
 import { NotificationContainerComponent } from './components/notification-container/notification-container.component';
 import { NotificationService } from './services/notification.service';
+import { OtpModalComponent } from './components/otp-modal/otp-modal.component';
 import * as pdfjs from 'pdfjs-dist';
 import { PagesSidebarComponent } from './components/pages-sidebar/pages-sidebar.component';
 import { ActivatedRoute } from '@angular/router';
@@ -46,6 +47,7 @@ import { DocsService } from './services/DocsService';
     PdfPreviewModalComponent,
     DrawingCanvasComponent,
     NotificationContainerComponent,
+    OtpModalComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -116,10 +118,11 @@ export class AppComponent implements OnInit {
 
   showThumbnails: boolean = false;
   sidebarCollapsed: boolean = false;
-  showProperties: boolean = true;
+  showProperties: boolean = false;
   private isGeneratingThumbnails: boolean = false;
   showPdfInfoModal = false;
   showPdfPreviewModal = false;
+  showOtpModal = false;
   previewPdfUrl: string = '';
   isDrawingMode = false;
   drawingTool: string | null = null;
@@ -206,7 +209,7 @@ export class AppComponent implements OnInit {
         await page.render({ canvasContext: ctx, viewport }).promise;
       }
 
-      pdf.destroy().catch(() => {});
+      pdf.destroy().catch(() => { });
     } catch (err) {
       // Erreur silencieuse
     } finally {
@@ -289,17 +292,8 @@ export class AppComponent implements OnInit {
 
     this.historyService.loadFromLocalStorage();
 
-    const documents = this.storageService.getAllDocuments();
-    if (documents.length > 0) {
-      const lastDocument = documents.sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      )[0];
-      // Charger automatiquement le dernier document sans confirmation
-      if (lastDocument) {
-        this.loadSavedDocument(lastDocument);
-      }
-    }
+    // Ne pas charger automatiquement le dernier document au démarrage
+    // L'utilisateur doit cliquer sur "Charger" pour charger un document sauvegardé
   }
 
   // ─── Chargement fichier ───────────────────────────────────────────────────
@@ -326,7 +320,7 @@ export class AppComponent implements OnInit {
         updatedAt: new Date(),
       };
 
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
       if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
       this.pdfUrl = URL.createObjectURL(blob);
       this.pdfFile = null;
@@ -352,27 +346,16 @@ export class AppComponent implements OnInit {
       const originalBuffer = await this.pdfFile.arrayBuffer();
       const fileName = this.pdfFile.name;
 
-      const savedDoc = this.storageService
-        .getAllDocuments()
-        .find((doc) => doc.name === fileName);
-
-      if (savedDoc) {
-        this.currentDocument = {
-          ...savedDoc,
-          updatedAt: new Date(savedDoc.updatedAt),
-          createdAt: new Date(savedDoc.createdAt),
-        };
-        // Document sauvegardé trouvé
-      } else {
-        this.currentDocument = {
-          id: this.generateId(),
-          name: fileName,
-          fields: [],
-          currentPage: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
+      // Ne pas charger automatiquement les champs sauvegardés lors de l'upload
+      // Les champs seront chargés uniquement si l'utilisateur clique sur "Charger"
+      this.currentDocument = {
+        id: this.generateId(),
+        name: fileName,
+        fields: [],
+        currentPage: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       // Charger dans pdf-lib seulement si nécessaire (pour l'export)
       try {
@@ -392,11 +375,8 @@ export class AppComponent implements OnInit {
       await this.generateThumbnails();
       this.showThumbnails = true;
 
-      if (savedDoc && savedDoc.fields.length > 0) {
-        // PDF chargé silencieusement
-      }
-
-      this.saveState();
+      // Ne pas sauvegarder automatiquement lors du chargement d'un PDF
+      // La sauvegarde se fera uniquement lors de la soumission (Terminé)
     } catch (error) {
       this.notificationService.error(
         "Erreur lors de l'ajout de l'image. Format non supporté ou fichier corrompu.",
@@ -407,19 +387,59 @@ export class AppComponent implements OnInit {
   // ─── Outils ───────────────────────────────────────────────────────────────
 
   onToolSelected(tool: string): void {
+    const previousTool = this.activeTool;
     this.activeTool = tool;
+
+    // Si l'outil effaceur est activé, restaurer les masques sauvegardés
+    if (tool === 'eraser') {
+      this.restoreRedactFields();
+    } else if (previousTool === 'eraser') {
+      // Si on quitte l'outil effaceur, supprimer les masques de l'affichage (mais pas du document)
+      // Les masques restent sauvegardés mais ne sont plus visibles
+      this.hideRedactFields();
+    }
 
     // Activer le mode dessin pour les outils de dessin
     if (
-      ['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle'].includes(
+      ['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle', 'eraser'].includes(
         tool,
       )
     ) {
       this.isDrawingMode = true;
-      this.drawingTool = tool;
+      this.drawingTool = tool === 'eraser' ? 'mask' : tool;
     } else {
       this.isDrawingMode = false;
       this.drawingTool = null;
+    }
+  }
+
+  private hideRedactFields(): void {
+    // Les masques restent dans le document mais ne sont plus visibles
+    // Ils seront restaurés quand l'outil effaceur sera réactivé
+    // Pas besoin de supprimer, juste ne pas les afficher (géré par le template)
+  }
+
+  private restoreRedactFields(): void {
+    if (!this.pdfFile) return;
+
+    const fileName = this.pdfFile.name;
+    const savedDoc = this.storageService
+      .getAllDocuments()
+      .find((doc) => doc.name === fileName);
+
+    if (savedDoc) {
+      // Restaurer seulement les masques (redact)
+      const redactFields = savedDoc.fields.filter(f => f.type === 'redact');
+      // Ajouter les masques qui ne sont pas déjà présents
+      const existingRedactIds = this.currentDocument.fields
+        .filter(f => f.type === 'redact')
+        .map(f => f.id);
+      const newRedactFields = redactFields.filter(f => !existingRedactIds.includes(f.id));
+
+      if (newRedactFields.length > 0) {
+        this.currentDocument.fields = [...this.currentDocument.fields, ...newRedactFields];
+        this.saveState();
+      }
     }
   }
 
@@ -430,7 +450,7 @@ export class AppComponent implements OnInit {
   }): Promise<void> {
     if (!this.activeTool) return;
 
-    // Mode effaceur - géré dans onFieldDeleted
+    // Mode effaceur - géré par le drawing-canvas
     if (this.activeTool === 'eraser') {
       return;
     }
@@ -785,9 +805,16 @@ export class AppComponent implements OnInit {
   // ─── Historique ───────────────────────────────────────────────────────────
 
   saveState(): void {
+    // Sauvegarder uniquement l'historique pour undo/redo, pas dans le storage
     this.currentDocument.updatedAt = new Date();
     this.historyService.saveState(this.currentDocument);
     this.updateHistoryButtons();
+    // Ne pas sauvegarder dans le storage ici - seulement lors de la soumission
+  }
+
+  saveToStorage(): void {
+    // Sauvegarder dans le storage uniquement lors de la soumission
+    this.currentDocument.updatedAt = new Date();
     this.storageService.saveDocument(this.currentDocument);
   }
 
@@ -837,16 +864,62 @@ export class AppComponent implements OnInit {
     const name = prompt('Nom du document:', this.currentDocument.name);
     if (name) {
       this.currentDocument.name = name;
-      this.saveState();
+      this.saveState(); // Pour l'historique
+      this.saveToStorage(); // Pour sauvegarder dans le storage
       this.notificationService.success('Document sauvegardé avec succès !');
     }
   }
 
+  async onOtpSubmitted(otpCode: string): Promise<void> {
+    // TODO: Appeler l'API backend pour vérifier le code OTP
+    // Pour l'instant, je simule une validation réussie
+    console.log('Code OTP reçu:', otpCode);
+
+    // Ici, on appellera l'API backend pour vérifier le code
+    // Exemple: const isValid = await this.docsService.verifyOtp(otpCode);
+    // if (!isValid) {
+    //   this.notificationService.error('Code OTP incorrect');
+    //   return;
+    // }
+
+    // Pour l'instant, on simule une validation réussie
+    // Sauvegarder le document dans le storage uniquement lors de la soumission
+    const name = this.currentDocument.name || `Document_${Date.now()}`;
+    this.currentDocument.name = name;
+    this.saveToStorage();
+
+    // Fermer le modal
+    this.showOtpModal = false;
+
+    // Afficher un message de succès
+    this.notificationService.success('Code OTP vérifié avec succès ! Redirection en cours...');
+
+    // Rediriger vers l'URL spécifiée après un court délai
+    setTimeout(() => {
+      window.location.href = 'https://solimus.sn/#/gestion-vente-vefa/46/detail-bien/86/detail-lot?action=DETAILS';
+    }, 1000);
+  }
+
+  onOtpModalClosed(): void {
+    this.showOtpModal = false;
+  }
+
+  onResendOtp(): void {
+    // TODO: Appeler l'API backend pour renvoyer le code OTP
+    console.log('Renvoyer le code OTP');
+    this.notificationService.success('Code OTP renvoyé avec succès !');
+  }
+
+  onTermine(): void {
+    // Ouvrir le modal OTP pour finaliser et soumettre
+    this.showOtpModal = true;
+  }
+
   onLoad(): void {
+    // Ouvrir la modal pour charger un document sauvegardé
     // Sauvegarder automatiquement l'état actuel avant d'ouvrir la modal
     if (this.currentDocument.fields.length > 0 && this.pdfUrl) {
-      this.storageService.saveDocument(this.currentDocument);
-      // État sauvegardé automatiquement
+      this.saveToStorage(); // Sauvegarder dans le storage avant de charger un autre document
     }
     this.showSavedDocuments = true;
   }
@@ -950,7 +1023,32 @@ export class AppComponent implements OnInit {
     this.showPdfPreviewModal = false;
   }
 
-  onDrawingComplete(dataUrl: string): void {
+  onDrawingComplete(data: string | { x: number; y: number; width: number; height: number }): void {
+    // Si c'est un masque (objet avec coordonnées)
+    if (typeof data === 'object' && 'x' in data) {
+      const redactField: PDFField = {
+        id: `redact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'redact',
+        x: data.x,
+        y: data.y,
+        width: data.width,
+        height: data.height,
+        value: '',
+        page: this.currentDocument.currentPage - 1,
+      };
+
+      this.currentDocument.fields = [...this.currentDocument.fields, redactField];
+      this.currentDocument.updatedAt = new Date();
+      this.saveState();
+
+      this.isDrawingMode = false;
+      this.drawingTool = null;
+      this.activeTool = null;
+      return;
+    }
+
+    // Sinon, c'est un dessin normal (image)
+    const dataUrl = data as string;
     const newField: PDFField = {
       id: `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'image',

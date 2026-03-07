@@ -21,16 +21,13 @@
       </div>
 
       <div class="header-right">
-        <div class="file-upload">
-          <input type="file" id="pdfInput" accept=".pdf" (change)="onFileSelected($event)" hidden>
-          <label for="pdfInput" class="btn-upload">
-            <i class="fas fa-upload"></i>
-            Charger un PDF
-          </label>
-          <span *ngIf="pdfFile" class="file-name">
-            {{ pdfFile.name }}
-          </span>
-        </div>
+        <button class="btn-upload" (click)="onTermine()" title="Terminé">
+          <i class="fas fa-check-circle"></i>
+          Terminé
+        </button>
+        <span *ngIf="pdfFile" class="file-name">
+          {{ pdfFile.name }}
+        </span>
       </div>
     </div>
 
@@ -150,6 +147,7 @@
             [width]="pageDimensions.width * scale"
             [height]="pageDimensions.height * scale"
             [drawingTool]="drawingTool"
+            [scale]="scale"
             (drawingComplete)="onDrawingComplete($event)"
             (drawingCancelled)="onDrawingCancelled()">
           </app-drawing-canvas>
@@ -215,6 +213,15 @@
     [pdfUrl]="previewPdfUrl"
     (closed)="closePdfPreviewModal()">
   </app-pdf-preview-modal>
+
+  <!-- Modal OTP -->
+  <app-otp-modal
+    [isOpen]="showOtpModal"
+    [phoneNumber]="'771234567'"
+    (closed)="onOtpModalClosed()"
+    (otpSubmitted)="onOtpSubmitted($event)"
+    (resendOtp)="onResendOtp()">
+  </app-otp-modal>
 
   <!-- Container de notifications -->
   <app-notification-container></app-notification-container>

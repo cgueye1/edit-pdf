@@ -59,6 +59,11 @@ background: white;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   overflow: hidden;
+
+  /* Curseur pour l'effaceur */
+  &.eraser-tool {
+    cursor: crosshair;
+  }
 }
 
 /* Canvas PDF - taille raisonnable par défaut */
@@ -68,6 +73,10 @@ background: white;
   box-shadow: none;
 border: none;
   transition: transform 0.2s ease;
+
+  &.eraser-tool {
+    cursor: crosshair;
+  }
 }
 
 /* Champs superposés */
@@ -92,6 +101,11 @@ border: none;
     opacity: 1;
     transform: scale(1);
 
+    /* Exception pour les masques redact - fond blanc */
+    &.redact-field-container {
+      background: white !important;
+    }
+
     &:hover:not(.editing):not(.dragging) {
       outline: 2px dashed #0d6efd;
       outline-offset: 2px;
@@ -104,7 +118,8 @@ border: none;
         outline: 2px solid #ef4444;
         outline-offset: 2px;
         background: rgba(239, 68, 68, 0.1) !important;
-        cursor: not-allowed;
+        cursor: crosshair;
+        transition: all 0.1s ease;
       }
     }
 
@@ -415,6 +430,35 @@ caret-color: #3182ce !important;
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* Bloc de caviardage (redact) - bloc blanc pour masquer le contenu */
+.redact-field-container {
+  cursor: move !important;
+  background: white !important;
+  
+  &:hover:not(.selected) {
+    outline: 2px dashed #ef4444 !important;
+    outline-offset: 2px;
+    background: white !important;
+  }
+  
+  &.selected {
+    outline: 2px solid #ef4444 !important;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+    background: white !important;
+  }
+}
+
+.redact-field {
+  width: 100%;
+  height: 100%;
+  background: white !important;
+  border: none !important;
+  pointer-events: none; /* Permettre le drag sur le conteneur parent */
+  z-index: 200;
+  opacity: 1 !important;
 }
 
 /* Champ date - style comme un vrai input date */

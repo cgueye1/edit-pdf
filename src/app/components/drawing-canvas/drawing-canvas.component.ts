@@ -19,7 +19,7 @@ import { FormsModule } from '@angular/forms';
       class="drawing-canvas">
     </canvas>
     
-    <div class="drawing-toolbar" *ngIf="drawingTool">
+    <div class="drawing-toolbar" *ngIf="drawingTool && drawingTool !== 'mask'">
       <div class="toolbar-group">
         <label>Couleur:</label>
         <input type="color" [(ngModel)]="drawingColor" (change)="updateDrawingStyle()">
@@ -127,7 +127,8 @@ export class DrawingCanvasComponent implements AfterViewInit {
   @Input() width = 800;
   @Input() height = 1000;
   @Input() drawingTool: string | null = null;
-  @Output() drawingComplete = new EventEmitter<string>();
+  @Input() scale = 1.5;
+  @Output() drawingComplete = new EventEmitter<string | { x: number; y: number; width: number; height: number }>();
   @Output() drawingCancelled = new EventEmitter<void>();
 
   Math = Math;
@@ -151,6 +152,7 @@ export class DrawingCanvasComponent implements AfterViewInit {
     if (!this.drawingTool) return 'default';
     if (this.drawingTool === 'draw') return 'crosshair';
     if (this.drawingTool === 'highlight') return 'text';
+    if (this.drawingTool === 'mask') return 'crosshair';
     return 'crosshair';
   }
 
@@ -177,6 +179,9 @@ export class DrawingCanvasComponent implements AfterViewInit {
       this.ctx.moveTo(this.startX, this.startY);
     }
   }
+  
+  private endX = 0;
+  private endY = 0;
 
   onMouseMove(event: MouseEvent) {
     if (!this.isDrawing || !this.drawingTool) return;
@@ -190,7 +195,7 @@ export class DrawingCanvasComponent implements AfterViewInit {
       this.ctx.lineTo(currentX, currentY);
       this.ctx.stroke();
     } else {
-      // Pour les formes, redessiner à chaque mouvement
+      // Pour les formes (y compris mask), redessiner à chaque mouvement
       this.redrawCanvas();
       this.drawShape(this.startX, this.startY, currentX, currentY);
     }
@@ -199,6 +204,21 @@ export class DrawingCanvasComponent implements AfterViewInit {
   onMouseUp(event: MouseEvent) {
     if (!this.isDrawing) return;
     this.isDrawing = false;
+
+    if (this.drawingTool === 'mask') {
+      // Pour l'outil masque, créer le masque directement au relâchement de la souris
+      const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+      this.endX = event.clientX - rect.left;
+      this.endY = event.clientY - rect.top;
+      
+      // Vérifier qu'on a bien dessiné quelque chose (pas juste un clic)
+      if (Math.abs(this.endX - this.startX) > 5 || Math.abs(this.endY - this.startY) > 5) {
+        // Créer le masque directement
+        this.createMask();
+      }
+      this.clearCanvas();
+      return;
+    }
 
     if (this.drawingTool === 'line' || this.drawingTool === 'arrow' || 
         this.drawingTool === 'rectangle' || this.drawingTool === 'circle') {
@@ -228,7 +248,20 @@ export class DrawingCanvasComponent implements AfterViewInit {
         break;
         
       case 'rectangle':
-        this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      case 'mask':
+        // Pour le masque, dessiner un rectangle avec bordure rouge
+        if (this.drawingTool === 'mask') {
+          this.ctx.strokeStyle = '#ef4444';
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([5, 5]);
+          this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          this.ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+          this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          // Réinitialiser pour les autres outils
+          this.updateDrawingStyle();
+        } else {
+          this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        }
         break;
         
       case 'circle':
@@ -277,5 +310,19 @@ export class DrawingCanvasComponent implements AfterViewInit {
   private clearCanvas() {
     this.ctx.clearRect(0, 0, this.width, this.height);
     this.currentPath = [];
+  }
+
+  private createMask() {
+    // Calcul des coordonnées en points PDF
+    const x = Math.min(this.startX, this.endX) / this.scale;
+    const width = Math.abs(this.endX - this.startX) / this.scale;
+    const height = Math.abs(this.endY - this.startY) / this.scale;
+    
+    const top_px = Math.min(this.startY, this.endY);
+    const height_px = Math.abs(this.endY - this.startY);
+    const pageHeight = this.height;
+    const y = (pageHeight - top_px - height_px) / this.scale;
+    
+    this.drawingComplete.emit({ x, y, width, height });
   }
 }
