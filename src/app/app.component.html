@@ -35,7 +35,7 @@
     <app-pdf-toolbar [canUndo]="canUndo" [canRedo]="canRedo" [totalPages]="totalPages"
       [currentPage]="currentDocument.currentPage" [showTextProperties]="activeTool === 'text'"
       [textProperties]="textProperties" (toolSelected)="onToolSelected($event)" (undo)="onUndo()" (redo)="onRedo()"
-      (export)="onExport()" (preview)="onPreview()" (save)="onSave()" (load)="onLoad()" (clear)="onClear()"
+      (export)="onExport(false)" (preview)="onPreview()" (save)="onSave()" (load)="onLoad()" (clear)="onClear()"
       (pageChange)="onPageChange($event)" (textPropertiesChange)="onTextPropertiesChange($event)"
       (toggleProperties)="showProperties = !showProperties">
     </app-pdf-toolbar>
@@ -215,13 +215,16 @@
   </app-pdf-preview-modal>
 
   <!-- Modal OTP -->
-  <app-otp-modal
+<app-otp-modal
     [isOpen]="showOtpModal"
-    [phoneNumber]="'771234567'"
+    [phoneNumber]="userPhoneNumber"
     (closed)="onOtpModalClosed()"
-    (otpSubmitted)="onOtpSubmitted($event)"
-    (resendOtp)="onResendOtp()">
+    (validated)="onOtpValidated($event)"
+  >
   </app-otp-modal>
+  
+  
+  
 
   <!-- Container de notifications -->
   <app-notification-container></app-notification-container>

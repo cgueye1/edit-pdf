@@ -1,0 +1,46 @@
+<!-- otp-modal.component.html -->
+<div class="modal-overlay" *ngIf="isOpen">
+  <div class="modal">
+    <h2>Code de vérification</h2>
+    <p>
+      Code envoyé au <b>{{ maskedPhone }}</b>
+    </p>
+
+    <div class="otp-box">
+      <input
+        *ngFor="let digit of otpDigits; let i = index"
+        #otpInput
+        type="text"
+        maxlength="1"
+        inputmode="numeric"
+        [value]="digit"
+        (input)="onInput($event, i)"
+        (keydown)="onKeyDown($event, i)"
+        (paste)="onPaste($event)"
+        (focus)="onFocus($event)"
+      />
+    </div>
+
+    <p class="error" *ngIf="hasError">
+      Code incorrect
+    </p>
+
+    <button
+      (click)="validateOtp()"
+      [disabled]="!isOtpComplete || isSubmitting"
+    >
+      Valider
+    </button>
+
+    <button
+      (click)="resendCode()"
+      [disabled]="resendCountdown > 0"
+    >
+      Renvoyer {{ resendCountdown > 0 ? '(' + resendCountdown + 's)' : '' }}
+    </button>
+
+    <button (click)="close()">
+      Fermer
+    </button>
+  </div>
+</div>

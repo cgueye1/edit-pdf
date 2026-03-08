@@ -1,0 +1,173 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  width: 420px;
+  max-width: 92vw;
+  background: white;
+  border-radius: 14px;
+  padding: 32px 26px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  text-align: center;
+  animation: modalEnter .25s ease;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1f;
+}
+
+p {
+  font-size: .95rem;
+  color: #4a5568;
+  margin-bottom: 26px;
+}
+
+.otp-box {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.otp-box input {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  transition: all .2s;
+}
+
+.otp-box input:focus {
+  outline: none;
+  border-color: #4fd1c7;
+  box-shadow: 0 0 0 3px rgba(79,209,199,0.15);
+}
+
+.error {
+  color: #f56565;
+  font-size: .85rem;
+  margin-bottom: 10px;
+}
+
+button {
+  width: 100%;
+  border-radius: 8px;
+  border: none;
+  padding: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all .2s;
+}
+
+button:first-of-type {
+  background: #3182ce;
+  color: white;
+}
+
+button:first-of-type:hover:not(:disabled) {
+  background: #2c5aa0;
+  transform: translateY(-1px);
+}
+
+button:nth-of-type(2) {
+  background: transparent;
+  color: #4fd1c7;
+}
+
+button:nth-of-type(2):disabled {
+  color: #a0aec0;
+  cursor: not-allowed;
+}
+
+button:last-of-type {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+button:last-of-type:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 500px) {
+
+  .otp-box input {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+
+}
+
+
+// otp-modal.component.scss
+.otp-box {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 20px 0;
+
+  input {
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    font-size: 24px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+
+    &:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+  }
+}
+
+.error {
+  color: #dc3545;
+  text-align: center;
+  margin: 10px 0;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:first-of-type {
+    background-color: #007bff;
+    color: white;
+  }
+}

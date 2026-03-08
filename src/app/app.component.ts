@@ -31,6 +31,7 @@ import { PagesSidebarComponent } from './components/pages-sidebar/pages-sidebar.
 import { ActivatedRoute } from '@angular/router';
 import * as CryptoJS from 'crypto-js';
 import { DocsService } from './services/DocsService';
+import { environment } from '../environments/environment.prod';
 
 @Component({
   selector: 'app-root',
@@ -128,6 +129,14 @@ export class AppComponent implements OnInit {
   drawingTool: string | null = null;
   docId: number = 0;
   recivedData: any;
+  
+  
+  
+  // Numéro de téléphone à valider
+  userPhoneNumber = '+221774262278';
+  
+  // État de validation du numéro
+  isPhoneValidated = false;
 
   // Optionnel : écouter le resize
   //   @HostListener('window:resize', ['$event'])
@@ -209,7 +218,7 @@ export class AppComponent implements OnInit {
         await page.render({ canvasContext: ctx, viewport }).promise;
       }
 
-      pdf.destroy().catch(() => { });
+      pdf.destroy().catch(() => {});
     } catch (err) {
       // Erreur silencieuse
     } finally {
@@ -251,21 +260,23 @@ export class AppComponent implements OnInit {
     return JSON.parse(decryptedString);
   }
   sendSignedDocument(file: File) {
-    this.docsService.uploadSignedPdf(this.docId, file).subscribe({
-      next: (res) => {
-        console.log('Upload réussi', res);
+    this.docsService
+      .markSignature(this.recivedData.id, this.recivedData.signerId, file, '')
+      .subscribe({
+        next: (res) => {
+          console.log('Document signé :', res);
 
-        // retour vers solimus
-        const url = `https://solimus.sn/#/gestion-vente-vefa/${this.recivedData.parentId}/detail-bien/${this.recivedData.propertyId}/detail-lot?action=DOCS`;
-        console.log(url);
+          // retour vers solimus
+          const url = `http://localhost:55938/#/gestion-vente-vefa/${this.recivedData.parentId}/detail-bien/${this.recivedData.propertyId}/detail-lot?action=DOCS`;
+          console.log(url);
 
-        // Ouvrir dans le même onglet
-        window.open(url, '_self');
-      },
-      error: (err) => {
-        console.error('Erreur upload', err);
-      },
-    });
+          // Ouvrir dans le même onglet
+          window.open(url, '_self');
+        },
+        error: (err) => {
+          console.error('Erreur signature', err);
+        },
+      });
   }
 
   ngOnInit(): void {
@@ -280,9 +291,7 @@ export class AppComponent implements OnInit {
           console.log('JSON récupéré :', data);
           this.docId = data.id;
 
-          this.loadPdfFromUrl(
-            'https://solimus.sn:8082/api/files/' + data.initPdf,
-          );
+          this.loadPdfFromUrl(environment.fileUrl + data.initPdf);
           // tu peux utiliser les données ici
         } catch (error) {
           console.error('Erreur de déchiffrement', error);
@@ -320,7 +329,9 @@ export class AppComponent implements OnInit {
         updatedAt: new Date(),
       };
 
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+      const blob = new Blob([new Uint8Array(pdfBytes)], {
+        type: 'application/pdf',
+      });
       if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
       this.pdfUrl = URL.createObjectURL(blob);
       this.pdfFile = null;
@@ -401,9 +412,15 @@ export class AppComponent implements OnInit {
 
     // Activer le mode dessin pour les outils de dessin
     if (
-      ['highlight', 'draw', 'line', 'arrow', 'rectangle', 'circle', 'eraser'].includes(
-        tool,
-      )
+      [
+        'highlight',
+        'draw',
+        'line',
+        'arrow',
+        'rectangle',
+        'circle',
+        'eraser',
+      ].includes(tool)
     ) {
       this.isDrawingMode = true;
       this.drawingTool = tool === 'eraser' ? 'mask' : tool;
@@ -429,15 +446,20 @@ export class AppComponent implements OnInit {
 
     if (savedDoc) {
       // Restaurer seulement les masques (redact)
-      const redactFields = savedDoc.fields.filter(f => f.type === 'redact');
+      const redactFields = savedDoc.fields.filter((f) => f.type === 'redact');
       // Ajouter les masques qui ne sont pas déjà présents
       const existingRedactIds = this.currentDocument.fields
-        .filter(f => f.type === 'redact')
-        .map(f => f.id);
-      const newRedactFields = redactFields.filter(f => !existingRedactIds.includes(f.id));
+        .filter((f) => f.type === 'redact')
+        .map((f) => f.id);
+      const newRedactFields = redactFields.filter(
+        (f) => !existingRedactIds.includes(f.id),
+      );
 
       if (newRedactFields.length > 0) {
-        this.currentDocument.fields = [...this.currentDocument.fields, ...newRedactFields];
+        this.currentDocument.fields = [
+          ...this.currentDocument.fields,
+          ...newRedactFields,
+        ];
         this.saveState();
       }
     }
@@ -746,7 +768,7 @@ export class AppComponent implements OnInit {
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
-  async onExport(): Promise<void> {
+  async onExport(signed: boolean): Promise<void> {
     if (this.currentDocument.fields.length === 0) {
       this.notificationService.warning(
         "Aucun champ à exporter. Ajoutez des éléments avant d'exporter.",
@@ -760,17 +782,22 @@ export class AppComponent implements OnInit {
         this.currentDocument.fields,
         `${this.currentDocument.name}.pdf`,
         false, // false = pas de preview
+        signed,
       );
 
       this.notificationService.success('PDF exporté avec succès !');
 
-      // 2️⃣ Convertir le Blob en File pour l'upload
-      const file = new File([blob], `${this.currentDocument.name}.pdf`, {
-        type: 'application/pdf',
-      });
+      if (signed) {
+        const file = new File([blob], `${this.currentDocument.name}.pdf`, {
+          type: 'application/pdf',
+        });
 
-      // 3️⃣ Envoyer le PDF au backend via ton service
-      this.sendSignedDocument(file);
+        this.sendSignedDocument(file);
+      } else {
+        this.notificationService.success('PDF exporté avec succès !');
+      }
+
+      // 2️⃣ Convertir le Blob en File pour l'upload
     } catch (error) {
       this.notificationService.error(
         "Erreur lors de l'export du PDF. Veuillez réessayer.",
@@ -892,12 +919,26 @@ export class AppComponent implements OnInit {
     this.showOtpModal = false;
 
     // Afficher un message de succès
-    this.notificationService.success('Code OTP vérifié avec succès ! Redirection en cours...');
+    this.notificationService.success(
+      'Code OTP vérifié avec succès ! Redirection en cours...',
+    );
 
-    // Rediriger vers l'URL spécifiée après un court délai
-    setTimeout(() => {
-      window.location.href = 'https://solimus.sn/#/gestion-vente-vefa/46/detail-bien/86/detail-lot?action=DETAILS';
-    }, 1000);
+    this.onExport(true);
+  }
+  
+  
+  onOtpValidated(isValid: boolean): void {
+    if (isValid) {
+      this.isPhoneValidated = true;
+      console.log('Numéro validé avec succès !');
+      
+      // Vous pouvez ici déclencher d'autres actions
+      // comme rediriger l'utilisateur, sauvegarder le statut, etc.
+      this.onExport(true);
+    } else {
+      console.error('Échec de la validation du code OTP');
+      this.showOtpModal = true; // Ré-ouvre le modal en cas d'échec
+    }
   }
 
   onOtpModalClosed(): void {
@@ -1023,7 +1064,9 @@ export class AppComponent implements OnInit {
     this.showPdfPreviewModal = false;
   }
 
-  onDrawingComplete(data: string | { x: number; y: number; width: number; height: number }): void {
+  onDrawingComplete(
+    data: string | { x: number; y: number; width: number; height: number },
+  ): void {
     // Si c'est un masque (objet avec coordonnées)
     if (typeof data === 'object' && 'x' in data) {
       const redactField: PDFField = {
@@ -1037,7 +1080,10 @@ export class AppComponent implements OnInit {
         page: this.currentDocument.currentPage - 1,
       };
 
-      this.currentDocument.fields = [...this.currentDocument.fields, redactField];
+      this.currentDocument.fields = [
+        ...this.currentDocument.fields,
+        redactField,
+      ];
       this.currentDocument.updatedAt = new Date();
       this.saveState();
 
