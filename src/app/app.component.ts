@@ -267,7 +267,7 @@ export class AppComponent implements OnInit {
           console.log('Document signé :', res);
 
           // retour vers solimus
-          const url = `http://localhost:55938/#/gestion-vente-vefa/${this.recivedData.parentId}/detail-bien/${this.recivedData.propertyId}/detail-lot?action=DOCS`;
+          const url = `https://solimus.sn/#/gestion-vente-vefa/${this.recivedData.parentId}/detail-bien/${this.recivedData.propertyId}/detail-lot?action=DOCS`;
           console.log(url);
 
           // Ouvrir dans le même onglet
