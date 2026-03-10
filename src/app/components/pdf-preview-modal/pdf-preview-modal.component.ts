@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -8,9 +8,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="modal-overlay" *ngIf="isOpen" (click)="close()" [@fadeIn]>
-      <div class="modal-container" (click)="$event.stopPropagation()" [@slideUp]>
-        
+    <div class="modal-overlay" *ngIf="isOpen"  [@slideUp]>
+      <div class="modal-container" >
+
         <div class="modal-header">
           <h2><i class="fas fa-eye"></i> Aperçu du PDF</h2>
           <button class="btn-close" (click)="close()">
@@ -116,7 +116,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
         width: 95vw;
         height: 95vh;
       }
-      
+
       .modal-body {
         padding: 10px;
       }
@@ -143,7 +143,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
     ])
   ]
 })
-export class PdfPreviewModalComponent {
+export class PdfPreviewModalComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() pdfUrl: string = '';
   @Output() closed = new EventEmitter<void>();
@@ -152,8 +152,13 @@ export class PdfPreviewModalComponent {
 
   constructor(private sanitizer: DomSanitizer) {}
 
-  ngOnChanges() {
-    if (this.pdfUrl) {
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['pdfUrl'] && this.pdfUrl) {
+      this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
+    } else if (changes['pdfUrl'] && !this.pdfUrl) {
+      this.safePdfUrl = null;
+    }
+    if (changes['isOpen'] && this.isOpen && this.pdfUrl) {
       this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
     }
   }

@@ -14,11 +14,12 @@ import { PDFField } from '../../models/pdf.model';
 import * as pdfjsLib from 'pdfjs-dist';
 import { DraggableDirective } from '../../directives/draggable.directive';
 import { ResizableDirective } from '../../directives/resizable.directive';
+import { DrawingCanvasComponent } from '../drawing-canvas/drawing-canvas.component';
 
 @Component({
     selector: 'app-pdf-viewer',
     standalone: true,
-    imports: [CommonModule, DraggableDirective, ResizableDirective],
+    imports: [CommonModule, DraggableDirective, ResizableDirective, DrawingCanvasComponent],
     templateUrl: './pdf-viewer.component.html',
     styleUrls: ['./pdf-viewer.component.scss'],
 })
@@ -32,8 +33,14 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     @Input() fields: PDFField[] = [];
     @Input() scale = 1.5;
     @Input() activeTool: string | null = null;
+    @Input() isDrawingMode = false;
+    @Input() drawingTool: string | null = null;
+    @Input() drawingOptions: { color: string; lineWidth: number; opacity: number } = { color: '#FFFF00', lineWidth: 14, opacity: 0.35 };
 
     @Output() pageClick = new EventEmitter<{ x: number; y: number; page: number }>();
+    @Output() drawingOptionsChange = new EventEmitter<{ color?: string; lineWidth?: number; opacity?: number }>();
+    @Output() drawingComplete = new EventEmitter<string | { x: number; y: number; width: number; height: number }>();
+    @Output() drawingCancelled = new EventEmitter<void>();
     @Output() fieldAdded = new EventEmitter<PDFField>();
     @Output() fieldUpdated = new EventEmitter<PDFField>();
     @Output() fieldSelected = new EventEmitter<PDFField>();
@@ -210,16 +217,17 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
 
     getFieldStyle(field: PDFField): any {
         if (this.isResizing && field === this.selectedField) {
+            const isDrawingImage = field.type === 'image' && field.id.startsWith('drawing_');
             return {
                 zIndex: 300,
-                fontSize: field.fontSize ? `${field.fontSize}px` : '14px',
+                fontSize: field.fontSize ? `${field.fontSize}px` : '8px',
                 color: field.color || '#1a202c',
-                fontFamily: field.fontFamily || 'Helvetica',
-                fontWeight: field.bold ? 'bold' : 'normal',
+                fontFamily: field.fontFamily || 'Calibri, sans-serif',
+                fontWeight: field.bold === true ? 'bold' : 'normal',
                 fontStyle: field.italic ? 'italic' : 'normal',
                 textDecoration: field.underline ? 'underline' : 'none',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: isDrawingImage ? 'flex-start' : 'center',
             };
         }
 
@@ -228,10 +236,11 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         const width_px = field.width * this.scale;
         const top_px = this.pageHeight - (field.y * this.scale) - height_px;
 
-        // Pour les checkboxes, utiliser les dimensions exactes sans minimum
-        const minWidth = field.type === 'checkbox' ? width_px : Math.max(width_px, 50);
-        const minHeight = field.type === 'checkbox' ? height_px : Math.max(height_px, 30);
+        // Pour checkboxes et redact : dimensions exactes (pas de minimum)
+        const minWidth = (field.type === 'checkbox' || field.type === 'redact') ? width_px : Math.max(width_px, 50);
+        const minHeight = (field.type === 'checkbox' || field.type === 'redact') ? height_px : Math.max(height_px, 30);
 
+        const isDrawingImage = field.type === 'image' && field.id.startsWith('drawing_');
         return {
             position: 'absolute' as const,
             left: `${left_px}px`,
@@ -239,14 +248,14 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             width: `${minWidth}px`,
             height: `${minHeight}px`,
             zIndex: field === this.selectedField ? 200 : (field === this.editingField ? 300 : 100),
-            fontSize: field.fontSize ? `${field.fontSize}px` : '14px',
+            fontSize: field.fontSize ? `${field.fontSize}px` : '8px',
             color: field.color || '#1a202c',
-            fontFamily: field.fontFamily || 'Helvetica',
-            fontWeight: field.bold ? 'bold' : 'normal',
+            fontFamily: field.fontFamily || 'Calibri, sans-serif',
+            fontWeight: field.bold === true ? 'bold' : 'normal',
             fontStyle: field.italic ? 'italic' : 'normal',
             textDecoration: field.underline ? 'underline' : 'none',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isDrawingImage ? 'flex-start' : 'center',
         };
     }
 
@@ -430,7 +439,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             if (context) {
-                context.font = `${field.fontSize || 14}px Helvetica`;
+                context.font = `${field.fontSize || 14}px Calibri`;
                 const w = Math.max(150, context.measureText(newText || 'W').width + 40);
                 input.style.width = `${Math.min(w, 600)}px`;
             }

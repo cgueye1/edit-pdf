@@ -1,13 +1,16 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component, Input, Output, EventEmitter,
+  ViewChild, ElementRef, AfterViewInit, OnChanges,
+  SimpleChanges, HostListener, OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-drawing-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
-    <canvas 
+    <canvas
       #drawingCanvas
       [width]="width"
       [height]="height"
@@ -15,32 +18,9 @@ import { FormsModule } from '@angular/forms';
       (mousedown)="onMouseDown($event)"
       (mousemove)="onMouseMove($event)"
       (mouseup)="onMouseUp($event)"
-      (mouseleave)="onMouseUp($event)"
+      (mouseleave)="onMouseLeave($event)"
       class="drawing-canvas">
     </canvas>
-    
-    <div class="drawing-toolbar" *ngIf="drawingTool && drawingTool !== 'mask'">
-      <div class="toolbar-group">
-        <label>Couleur:</label>
-        <input type="color" [(ngModel)]="drawingColor" (change)="updateDrawingStyle()">
-      </div>
-      <div class="toolbar-group">
-        <label>Épaisseur:</label>
-        <input type="range" min="1" max="20" [(ngModel)]="lineWidth" (input)="updateDrawingStyle()">
-        <span>{{lineWidth}}px</span>
-      </div>
-      <div class="toolbar-group" *ngIf="drawingTool === 'highlight'">
-        <label>Opacité:</label>
-        <input type="range" min="0.1" max="1" step="0.1" [(ngModel)]="opacity" (input)="updateDrawingStyle()">
-        <span>{{Math.round(opacity * 100)}}%</span>
-      </div>
-      <button class="btn-finish" (click)="finishDrawing()">
-        <i class="fas fa-check"></i> Terminer
-      </button>
-      <button class="btn-cancel" (click)="cancelDrawing()">
-        <i class="fas fa-times"></i> Annuler
-      </button>
-    </div>
   `,
   styles: [`
     .drawing-canvas {
@@ -50,279 +30,394 @@ import { FormsModule } from '@angular/forms';
       z-index: 1000;
       pointer-events: auto;
     }
-
-    .drawing-toolbar {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      padding: 12px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      z-index: 2000;
-    }
-
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .toolbar-group label {
-      font-weight: 500;
-      color: #4a5568;
-    }
-
-    .toolbar-group input[type="color"] {
-      width: 40px;
-      height: 32px;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .toolbar-group input[type="range"] {
-      width: 100px;
-    }
-
-    .btn-finish, .btn-cancel {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .btn-finish {
-      background: #48bb78;
-      color: white;
-    }
-
-    .btn-finish:hover {
-      background: #38a169;
-    }
-
-    .btn-cancel {
-      background: #f56565;
-      color: white;
-    }
-
-    .btn-cancel:hover {
-      background: #e53e3e;
-    }
   `]
 })
-export class DrawingCanvasComponent implements AfterViewInit {
+export class DrawingCanvasComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('drawingCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+
   @Input() width = 800;
   @Input() height = 1000;
   @Input() drawingTool: string | null = null;
   @Input() scale = 1.5;
-  @Output() drawingComplete = new EventEmitter<string | { x: number; y: number; width: number; height: number }>();
-  @Output() drawingCancelled = new EventEmitter<void>();
+  @Input() drawingColorInput = '#FFFF00';
+  @Input() drawingLineWidthInput = 16;
+  @Input() drawingOpacityInput = 0.4;
 
-  Math = Math;
+  @Output() drawingComplete = new EventEmitter<
+    | string
+    | { x: number; y: number; width: number; height: number }
+    | { dataUrl: string; x: number; y: number; width: number; height: number }
+  >();
+  @Output() drawingCancelled = new EventEmitter<void>();
+  @Output() drawingOptionsChange = new EventEmitter<{ color?: string; lineWidth?: number; opacity?: number }>();
+
+  // ─── état interne ─────────────────────────────────────────────────────────
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;
   private startX = 0;
   private startY = 0;
-  private currentPath: {x: number, y: number}[] = [];
+  private endX = 0;
+  private endY = 0;
+  private currentPath: { x: number; y: number }[] = [];
+  private lastMoveX = 0;
+  private lastMoveY = 0;
+  private rafPending = false;
 
-  drawingColor = '#FFFF00';
-  lineWidth = 3;
-  opacity = 0.5;
+  // couleur / style courants
+  drawingColor  = '#FFFF00';
+  lineWidth     = 16;
+  opacity       = 0.4;
 
-  ngAfterViewInit() {
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx = canvas.getContext('2d')!;
-    this.updateDrawingStyle();
+  Math = Math;
+
+  // ─── lifecycle ────────────────────────────────────────────────────────────
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['drawingColorInput']?.currentValue)
+      this.drawingColor = changes['drawingColorInput'].currentValue;
+    if (changes['drawingLineWidthInput']?.currentValue > 0)
+      this.lineWidth = changes['drawingLineWidthInput'].currentValue;
+    if (changes['drawingOpacityInput']?.currentValue >= 0)
+      this.opacity = changes['drawingOpacityInput'].currentValue;
+    if (this.ctx) this.applyStyle();
   }
+
+  ngAfterViewInit(): void {
+    const canvas = this.canvasRef.nativeElement;
+    this.ctx = canvas.getContext('2d', { alpha: true })!;
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
+    this.applyStyle();
+  }
+
+  ngOnDestroy(): void {}
+
+  // ─── curseur ──────────────────────────────────────────────────────────────
 
   getCursor(): string {
     if (!this.drawingTool) return 'default';
+
+    if (this.drawingTool === 'highlight') {
+      // Curseur : I-beam (curseur texte) avec halo de points couleur surlignage autour
+      const dotColor = encodeURIComponent(this.drawingColor);
+      const size = 32;
+      const cx = size / 2;
+      const cy = size / 2;
+      const r = 2;        // rayon des points
+      const orbit = 11;   // distance du centre
+      const svg = `
+        <svg fill="#000000" height="187px" width="187px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-315.25 -315.25 1115.50 1115.50" xml:space="preserve" stroke="#000000" stroke-width="0.00485" transform="matrix(1, 0, 0, 1, 0, 0)"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="9.7"></g><g id="SVGRepo_iconCarrier"> <polygon points="312.274,30 312.274,0 172.726,0 172.726,30 227.5,30 227.5,227.5 202.5,227.5 202.5,257.5 227.5,257.5 227.5,455 172.726,455 172.726,485 312.274,485 312.274,455 257.5,455 257.5,257.5 282.5,257.5 282.5,227.5 257.5,227.5 257.5,30 "></polygon> </g></svg>`.trim();
+      const encoded = `data:image/svg+xml;base64,${btoa(svg)}`;
+      return `url("${encoded}") ${cx} ${cy}, text`;
+    }
+
     if (this.drawingTool === 'draw') return 'crosshair';
-    if (this.drawingTool === 'highlight') return 'text';
     if (this.drawingTool === 'mask') return 'crosshair';
     return 'crosshair';
   }
 
-  updateDrawingStyle() {
+  // ─── style canvas ─────────────────────────────────────────────────────────
+
+  private applyStyle(): void {
     if (!this.ctx) return;
+    const isHL = this.drawingTool === 'highlight';
+
     this.ctx.strokeStyle = this.drawingColor;
-    this.ctx.lineWidth = this.lineWidth;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.globalAlpha = this.drawingTool === 'highlight' ? this.opacity : 1;
+    this.ctx.fillStyle   = this.drawingColor;
+    this.ctx.lineWidth   = isHL ? Math.max(this.lineWidth, 12) : this.lineWidth;
+    this.ctx.lineCap     = isHL ? 'butt' : 'round';
+    this.ctx.lineJoin    = 'round';
+
+    if (isHL) {
+      this.ctx.globalCompositeOperation = 'multiply';
+      this.ctx.globalAlpha = Math.min(Math.max(this.opacity, 0.15), 0.7);
+    } else {
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.globalAlpha = 1;
+    }
   }
 
-  onMouseDown(event: MouseEvent) {
+  // ─── événements souris ───────────────────────────────────────────────────
+
+  onMouseDown(event: MouseEvent): void {
     if (!this.drawingTool) return;
-    
+    event.preventDefault();
+
     this.isDrawing = true;
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
     this.startX = event.clientX - rect.left;
     this.startY = event.clientY - rect.top;
-    
-    if (this.drawingTool === 'draw' || this.drawingTool === 'highlight') {
-      this.currentPath = [{x: this.startX, y: this.startY}];
+
+    this.applyStyle();
+
+    if (this.drawingTool === 'highlight') {
+      this.currentPath = [{ x: this.startX, y: this.startY }];
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.startX, this.startY);
+
+    } else if (this.drawingTool === 'draw') {
+      this.currentPath = [{ x: this.startX, y: this.startY }];
       this.ctx.beginPath();
       this.ctx.moveTo(this.startX, this.startY);
     }
   }
-  
-  private endX = 0;
-  private endY = 0;
 
-  onMouseMove(event: MouseEvent) {
+  onMouseMove(event: MouseEvent): void {
     if (!this.isDrawing || !this.drawingTool) return;
-    
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    const currentX = event.clientX - rect.left;
-    const currentY = event.clientY - rect.top;
 
-    if (this.drawingTool === 'draw' || this.drawingTool === 'highlight') {
-      this.currentPath.push({x: currentX, y: currentY});
-      this.ctx.lineTo(currentX, currentY);
-      this.ctx.stroke();
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    const cx = event.clientX - rect.left;
+    const cy = event.clientY - rect.top;
+
+    if (this.drawingTool === 'highlight' || this.drawingTool === 'draw') {
+      this.lastMoveX = cx;
+      this.lastMoveY = cy;
+      if (!this.rafPending) {
+        this.rafPending = true;
+        requestAnimationFrame(() => this.drawSegment());
+      }
     } else {
-      // Pour les formes (y compris mask), redessiner à chaque mouvement
       this.redrawCanvas();
-      this.drawShape(this.startX, this.startY, currentX, currentY);
+      this.drawShape(this.startX, this.startY, cx, cy);
     }
   }
 
-  onMouseUp(event: MouseEvent) {
+  onMouseUp(event: MouseEvent): void {
     if (!this.isDrawing) return;
     this.isDrawing = false;
 
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    this.endX = event.clientX - rect.left;
+    this.endY = event.clientY - rect.top;
+
     if (this.drawingTool === 'mask') {
-      // Pour l'outil masque, créer le masque directement au relâchement de la souris
-      const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-      this.endX = event.clientX - rect.left;
-      this.endY = event.clientY - rect.top;
-      
-      // Vérifier qu'on a bien dessiné quelque chose (pas juste un clic)
       if (Math.abs(this.endX - this.startX) > 5 || Math.abs(this.endY - this.startY) > 5) {
-        // Créer le masque directement
         this.createMask();
       }
       this.clearCanvas();
       return;
     }
 
-    if (this.drawingTool === 'line' || this.drawingTool === 'arrow' || 
-        this.drawingTool === 'rectangle' || this.drawingTool === 'circle') {
-      const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-      const endX = event.clientX - rect.left;
-      const endY = event.clientY - rect.top;
-      this.drawShape(this.startX, this.startY, endX, endY);
+    if (this.drawingTool === 'highlight' || this.drawingTool === 'draw') {
+      if (this.currentPath.length > 1) this.finishDrawing();
+      else this.clearCanvas();
+      return;
+    }
+
+    if (['line', 'arrow', 'rectangle', 'circle'].includes(this.drawingTool!)) {
+      this.drawShape(this.startX, this.startY, this.endX, this.endY);
+      this.finishDrawing();
     }
   }
 
-  private redrawCanvas() {
+  onMouseLeave(event: MouseEvent): void {
+    if (this.isDrawing && this.drawingTool !== 'highlight' && this.drawingTool !== 'draw') {
+      this.onMouseUp(event);
+    }
+  }
+
+  // ─── Dessin segment par segment (rAF) ─────────────────────────────────────
+
+  private drawSegment(): void {
+    this.rafPending = false;
+    if (!this.ctx || !this.drawingTool || this.currentPath.length === 0) return;
+
+    const x = this.lastMoveX;
+    const y = this.lastMoveY;
+    const last = this.currentPath[this.currentPath.length - 1];
+    if (Math.abs(last.x - x) < 0.3 && Math.abs(last.y - y) < 0.3) return;
+
+    if (this.drawingTool === 'highlight') {
+      // ✅ FIX : Y est verrouillé sur startY → trait horizontal parfaitement droit
+      const hl = Math.max(this.lineWidth, 12);
+      const fixedY = this.startY; // ← clé du fix : on ignore le Y de la souris
+      this.ctx.lineWidth = hl;
+      this.ctx.lineCap   = 'butt';
+      this.ctx.lineJoin  = 'round';
+      this.ctx.beginPath();
+      this.ctx.moveTo(last.x, fixedY);
+      this.ctx.lineTo(x, fixedY);
+      this.ctx.stroke();
+      // On stocke le vrai x mais fixedY pour garder la trace horizontale
+      this.currentPath.push({ x, y: fixedY });
+
+    } else {
+      // Dessin libre : courbe lissée, suit la souris normalement
+      this.ctx.quadraticCurveTo(last.x, last.y, x, y);
+      this.ctx.stroke();
+      this.currentPath.push({ x, y });
+    }
+  }
+
+  // ─── Formes ───────────────────────────────────────────────────────────────
+
+  private redrawCanvas(): void {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
 
-  private drawShape(x1: number, y1: number, x2: number, y2: number) {
+  private drawShape(x1: number, y1: number, x2: number, y2: number): void {
+    this.applyStyle();
     this.ctx.beginPath();
-    
+
     switch (this.drawingTool) {
       case 'line':
         this.ctx.moveTo(x1, y1);
         this.ctx.lineTo(x2, y2);
         this.ctx.stroke();
         break;
-        
+
       case 'arrow':
         this.drawArrow(x1, y1, x2, y2);
         break;
-        
+
       case 'rectangle':
-      case 'mask':
-        // Pour le masque, dessiner un rectangle avec bordure rouge
-        if (this.drawingTool === 'mask') {
-          this.ctx.strokeStyle = '#ef4444';
-          this.ctx.lineWidth = 2;
-          this.ctx.setLineDash([5, 5]);
-          this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-          this.ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
-          this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-          // Réinitialiser pour les autres outils
-          this.updateDrawingStyle();
-        } else {
-          this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        }
+        this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         break;
-        
+
+      case 'mask':
+        this.ctx.strokeStyle = '#ef4444';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        this.ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+        this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        this.ctx.setLineDash([]);
+        this.applyStyle();
+        break;
+
       case 'circle':
-        const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-        this.ctx.arc(x1, y1, radius, 0, 2 * Math.PI);
+        const r = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        this.ctx.arc(x1, y1, r, 0, 2 * Math.PI);
         this.ctx.stroke();
         break;
     }
   }
 
-  private drawArrow(x1: number, y1: number, x2: number, y2: number) {
-    const headLength = 15;
+  private drawArrow(x1: number, y1: number, x2: number, y2: number): void {
+    const headLen = 15;
     const angle = Math.atan2(y2 - y1, x2 - x1);
-    
-    // Ligne principale
+
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
-    
-    // Pointe de la flèche
+
     this.ctx.beginPath();
     this.ctx.moveTo(x2, y2);
-    this.ctx.lineTo(
-      x2 - headLength * Math.cos(angle - Math.PI / 6),
-      y2 - headLength * Math.sin(angle - Math.PI / 6)
-    );
+    this.ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
     this.ctx.moveTo(x2, y2);
-    this.ctx.lineTo(
-      x2 - headLength * Math.cos(angle + Math.PI / 6),
-      y2 - headLength * Math.sin(angle + Math.PI / 6)
-    );
+    this.ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
     this.ctx.stroke();
   }
 
-  finishDrawing() {
-    const dataUrl = this.canvasRef.nativeElement.toDataURL('image/png');
-    this.drawingComplete.emit(dataUrl);
+  // ─── Finalisation ─────────────────────────────────────────────────────────
+
+  finishDrawing(): void {
+    const pad = Math.ceil(Math.max(this.lineWidth, 12)) + 8;
+
+    if (['line', 'arrow', 'rectangle', 'circle'].includes(this.drawingTool!)) {
+      let minX: number, minY: number, w: number, h: number;
+
+      if (this.drawingTool === 'circle') {
+        const r = Math.sqrt(Math.pow(this.endX - this.startX, 2) + Math.pow(this.endY - this.startY, 2));
+        minX = this.startX - r - pad;
+        minY = this.startY - r - pad;
+        w = 2 * r + 2 * pad;
+        h = 2 * r + 2 * pad;
+      } else {
+        minX = Math.min(this.startX, this.endX) - pad;
+        minY = Math.min(this.startY, this.endY) - pad;
+        w = Math.abs(this.endX - this.startX) + 2 * pad;
+        h = Math.abs(this.endY - this.startY) + 2 * pad;
+      }
+
+      this.emitCroppedRegion(
+        Math.max(0, minX), Math.max(0, minY),
+        Math.min(w, this.width), Math.min(h, this.height)
+      );
+      return;
+    }
+
+    if ((this.drawingTool === 'highlight' || this.drawingTool === 'draw') && this.currentPath.length > 1) {
+      let pxMin = this.currentPath[0].x, pyMin = this.currentPath[0].y;
+      let pxMax = pxMin, pyMax = pyMin;
+      this.currentPath.forEach(p => {
+        pxMin = Math.min(pxMin, p.x); pyMin = Math.min(pyMin, p.y);
+        pxMax = Math.max(pxMax, p.x); pyMax = Math.max(pyMax, p.y);
+      });
+
+      const hlHeight = this.drawingTool === 'highlight' ? Math.max(this.lineWidth, 12) : undefined;
+      // ✅ FIX décalage : this.startY = Y exact du trait horizontal, pas pyMin qui peut dériver
+      const cropMinY = hlHeight
+        ? Math.max(0, this.startY - hlHeight / 2 - 2)
+        : Math.max(0, pyMin - pad);
+      const cropH = hlHeight
+        ? hlHeight + 4
+        : Math.min(this.height - cropMinY, pyMax - pyMin + 2 * pad);
+
+      this.emitCroppedRegion(
+        Math.max(0, pxMin - pad),
+        cropMinY,
+        Math.min(this.width, pxMax - pxMin + 2 * pad),
+        cropH,
+      );
+      return;
+    }
+
+    this.drawingComplete.emit(this.canvasRef.nativeElement.toDataURL('image/png'));
     this.clearCanvas();
   }
 
-  cancelDrawing() {
+  private emitCroppedRegion(minX: number, minY: number, w: number, h: number): void {
+    if (w < 1 || h < 1) { this.clearCanvas(); return; }
+
+    const cropped = this.cropRegion(minX, minY, w, h);
+    if (cropped) {
+      this.drawingComplete.emit({
+        dataUrl: cropped,
+        x:      minX / this.scale,
+        y:      (this.height - minY - h) / this.scale,
+        width:  w / this.scale,
+        height: h / this.scale,
+      });
+    }
+    this.clearCanvas();
+  }
+
+  private cropRegion(minX: number, minY: number, w: number, h: number): string | null {
+    const src = this.canvasRef.nativeElement;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const ctx2 = off.getContext('2d');
+    if (!ctx2) return null;
+    ctx2.drawImage(src, minX, minY, w, h, 0, 0, w, h);
+    return off.toDataURL('image/png');
+  }
+
+  private clearCanvas(): void {
+    if (this.ctx) this.ctx.clearRect(0, 0, this.width, this.height);
+    this.currentPath = [];
+  }
+
+  private createMask(): void {
+    const x      = Math.min(this.startX, this.endX) / this.scale;
+    const w      = Math.abs(this.endX - this.startX) / this.scale;
+    const h      = Math.abs(this.endY - this.startY) / this.scale;
+    const top_px = Math.min(this.startY, this.endY);
+    const h_px   = Math.abs(this.endY - this.startY);
+    const y      = (this.height - top_px - h_px) / this.scale;
+    this.drawingComplete.emit({ x, y, width: w, height: h });
+  }
+
+  cancelDrawing(): void {
     this.clearCanvas();
     this.drawingCancelled.emit();
   }
 
-  private clearCanvas() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-    this.currentPath = [];
-  }
-
-  private createMask() {
-    // Calcul des coordonnées en points PDF
-    const x = Math.min(this.startX, this.endX) / this.scale;
-    const width = Math.abs(this.endX - this.startX) / this.scale;
-    const height = Math.abs(this.endY - this.startY) / this.scale;
-    
-    const top_px = Math.min(this.startY, this.endY);
-    const height_px = Math.abs(this.endY - this.startY);
-    const pageHeight = this.height;
-    const y = (pageHeight - top_px - height_px) / this.scale;
-    
-    this.drawingComplete.emit({ x, y, width, height });
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isDrawing) {
+      this.isDrawing = false;
+      this.clearCanvas();
+    }
   }
 }

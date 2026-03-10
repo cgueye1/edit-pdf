@@ -6,12 +6,12 @@
   position: relative;
   width: 100%;
   height: 100%;
-background: #e9ecef;
-overflow: auto;
-padding: 32px 16px;
-display: flex;
+  background: #e9ecef;
+  overflow: auto;
+  padding: 32px 16px;
+  display: flex;
   justify-content: center;
-align-items: flex-start;
+  align-items: flex-start;
 }
 
 /* Overlay de chargement */
@@ -44,18 +44,23 @@ align-items: flex-start;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Conteneur principal du PDF (taille contrôlée) */
 .pdf-container {
   position: relative;
   margin: 0 auto;
-width: fit-content;
+  width: fit-content;
   max-width: 100%;
-min-height: 200px;
-background: white;
+  min-height: 200px;
+  background: white;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -71,7 +76,7 @@ background: white;
   display: block !important;
   background: white;
   box-shadow: none;
-border: none;
+  border: none;
   transition: transform 0.2s ease;
 
   &.eraser-tool {
@@ -101,9 +106,18 @@ border: none;
     opacity: 1;
     transform: scale(1);
 
-    /* Exception pour les masques redact - fond blanc */
+    /* Exception pour les masques redact - fond blanc, pas de bordure ni contour */
     &.redact-field-container {
       background: white !important;
+      outline: none !important;
+      box-shadow: none !important;
+      pointer-events: none !important;
+    }
+
+    &.redact-field-container:hover,
+    &.redact-field-container.selected {
+      outline: none !important;
+      box-shadow: none !important;
     }
 
     &:hover:not(.editing):not(.dragging) {
@@ -123,6 +137,16 @@ border: none;
       }
     }
 
+    /* Redact : jamais de contour ni de poignées, clics traversent */
+    &.redact-field-container:hover,
+    &.redact-field-container.selected,
+    .pdf-container.eraser-tool &.redact-field-container:hover {
+      outline: none !important;
+      outline-offset: 0 !important;
+      box-shadow: none !important;
+      background: white !important;
+    }
+
     &.selected:not(.editing):not(.dragging) {
       outline: 2px solid #0d6efd;
       outline-offset: 2px;
@@ -134,7 +158,7 @@ border: none;
       cursor: move !important;
       opacity: 0.8;
       z-index: 400;
-      
+
       * {
         cursor: move !important;
       }
@@ -156,7 +180,7 @@ border: none;
 
   .pdf-container {
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -174,9 +198,11 @@ border: none;
   position: relative;
   width: 100%;
   height: 100%;
+  font-family: Calibri, 'Calibri Light', sans-serif;
+  font-weight: 400; /* Fin, non bold (Calibri corps) */
 
-/*// FORCER LA TRANSPARENCE TOTALE*/
-background: transparent !important;
+  /*// FORCER LA TRANSPARENCE TOTALE*/
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
@@ -185,131 +211,133 @@ background: transparent !important;
   transition: opacity 0.2s ease, transform 0.2s ease;
   cursor: inherit;
 
-/*// Mode affichage (texte déjà saisi)*/
-.text-display {
-  width: 100%;
-  height: 100%;
-  padding: 0 !important;
-  margin: 0;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  cursor: inherit;
-  word-break: break-word;
-  white-space: pre-wrap;
-  line-height: 1.2;
-
-  span {
+  /*// Mode affichage (texte déjà saisi)*/
+  .text-display {
+    width: 100%;
+    height: 100%;
+    padding: 0 !important;
+    margin: 0;
     background: transparent !important;
     border: none !important;
+    outline: none !important;
     box-shadow: none !important;
+    cursor: inherit;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.2;
+
+    span {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    &.empty-text .placeholder-text {
+      color: #cbd5e0;
+      font-style: italic;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    &.empty-text:hover .placeholder-text {
+      opacity: 0.3;
+    }
   }
 
-  &.empty-text .placeholder-text {
-    color: #cbd5e0;
-    font-style: italic;
-    opacity: 0;
-    transition: opacity 0.2s;
+  /*// Mode édition - INPUT TOUJOURS INVISIBLE*/
+  .text-edit-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-family: inherit;
+    font-weight: 400; /* Fin, non bold (override si field.bold) */
+
+    /*// Dimensions*/
+    width: auto !important;
+    min-width: 100px !important;
+    max-width: 600px !important;
+    height: auto !important;
+
+    /*// Espacement - AUCUN*/
+    padding: 0 !important;
+    margin: 0 !important;
+
+    /*// Apparence - TOUJOURS TRANSPARENT*/
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    /*// Comportement*/
+    resize: none;
+    overflow: visible;
+    font-family: inherit;
+    line-height: 1.2;
+    transition: width 0.2s ease, opacity 0.15s ease;
+
+    /*// Curseur visible*/
+    caret-color: #3182ce !important;
+
+    /*// Sélection de texte*/
+    &::selection {
+      background: rgba(49, 130, 206, 0.3);
+    }
+
+    /*// FOCUS - rester invisible*/
+    &:focus {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /*// HOVER - rester invisible*/
+    &:hover {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /*// ACTIVE - rester invisible*/
+    &:active {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /*// Supprimer apparence native*/
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    /*// Autocomplete transparent*/
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+      box-shadow: 0 0 0px 1000px transparent inset !important;
+      background-color: transparent !important;
+      background: transparent !important;
+      -webkit-text-fill-color: inherit !important;
+    }
+
+    &::placeholder {
+      color: transparent !important;
+      opacity: 0 !important;
+    }
   }
 
-  &.empty-text:hover .placeholder-text {
-    opacity: 0.3;
+  /*// Masquer les handles*/
+  .field-handle {
+    display: none !important;
   }
-}
-
-/*// Mode édition - INPUT TOUJOURS INVISIBLE*/
-.text-edit-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-
-/*// Dimensions*/
-width: auto !important;
-  min-width: 100px !important;
-  max-width: 600px !important;
-  height: auto !important;
-
-/*// Espacement - AUCUN*/
-padding: 0 !important;
-  margin: 0 !important;
-
-/*// Apparence - TOUJOURS TRANSPARENT*/
-background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-
-/*// Comportement*/
-resize: none;
-  overflow: visible;
-  font-family: inherit;
-  line-height: 1.2;
-  transition: width 0.2s ease, opacity 0.15s ease;
-
-/*// Curseur visible*/
-caret-color: #3182ce !important;
-
-/*// Sélection de texte*/
-&::selection {
-  background: rgba(49, 130, 206, 0.3);
-}
-
-/*// FOCUS - rester invisible*/
-&:focus {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/*// HOVER - rester invisible*/
-&:hover {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/*// ACTIVE - rester invisible*/
-&:active {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/*// Supprimer apparence native*/
--webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-
-/*// Autocomplete transparent*/
-&:-webkit-autofill,
-&:-webkit-autofill:hover,
-&:-webkit-autofill:focus,
-&:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
-  box-shadow: 0 0 0px 1000px transparent inset !important;
-  background-color: transparent !important;
-  background: transparent !important;
-  -webkit-text-fill-color: inherit !important;
-}
-
-  &::placeholder {
-    color: transparent !important;
-    opacity: 0 !important;
-  }
-}
-
-/*// Masquer les handles*/
-.field-handle {
-  display: none !important;
-}
 }
 
 /*// ============================================*/
@@ -350,10 +378,10 @@ caret-color: #3182ce !important;
     outline: none !important;
   }
 
-/*// Supprimer le ::before pour les bordures en pointillés*/
-&::before {
-  display: none !important;
-}
+  /*// Supprimer le ::before pour les bordures en pointillés*/
+  &::before {
+    display: none !important;
+  }
 }
 
 /*// ============================================*/
@@ -432,23 +460,55 @@ caret-color: #3182ce !important;
   display: block;
 }
 
-/* Bloc de caviardage (redact) - bloc blanc pour masquer le contenu */
+/* Dessin / surligneur : aligner en haut pour éviter le décalage vers le bas (parent en align-items: center) */
+.image-field-drawing {
+  align-self: flex-start;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.image-field-drawing img {
+  object-fit: fill;
+  vertical-align: top;
+}
+
+/* Surligneur / dessin : afficher tel quel (même opacité qu’au tracé et qu’à l’aperçu PDF) */
+.image-field-drawing {
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.image-field-drawing img {
+  /* Pas d’opacity ni mix-blend : le PNG a déjà la bonne transparence (globalAlpha au tracé) */
+}
+
+/* Surligneur style PDFAid : Multiply teinte le texte comme un marqueur réel */
+.image-field-highlight:not(.blend-normal) img {
+  mix-blend-mode: multiply;
+}
+
+/* Bloc de caviardage (redact) - zone blanche sans bordure ni poignées ; déplaçable en mode effaceur/sélection */
 .redact-field-container {
-  cursor: move !important;
+  pointer-events: none !important;
+  cursor: default !important;
   background: white !important;
-  
-  &:hover:not(.selected) {
-    outline: 2px dashed #ef4444 !important;
-    outline-offset: 2px;
-    background: white !important;
-  }
-  
-  &.selected {
-    outline: 2px solid #ef4444 !important;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
-    background: white !important;
-  }
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Toujours déplaçable par glisser-déposer, sans avoir à choisir l'outil Déplacer */
+.redact-field-container.redact-interactive {
+  pointer-events: auto !important;
+  cursor: move !important;
+}
+
+.redact-field-container:hover,
+.redact-field-container.selected {
+  outline: none !important;
+  box-shadow: none !important;
+  background: white !important;
 }
 
 .redact-field {
@@ -456,7 +516,7 @@ caret-color: #3182ce !important;
   height: 100%;
   background: white !important;
   border: none !important;
-  pointer-events: none; /* Permettre le drag sur le conteneur parent */
+  pointer-events: none !important;
   z-index: 200;
   opacity: 1 !important;
 }
@@ -549,6 +609,7 @@ caret-color: #3182ce !important;
     opacity: 0;
     transform: translateX(-50%) translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);

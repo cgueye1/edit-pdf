@@ -25,19 +25,20 @@
           <i class="fas fa-check-circle"></i>
           Terminé
         </button>
-        <span *ngIf="pdfFile" class="file-name">
-          {{ pdfFile.name }}
-        </span>
+<!--        <span *ngIf="pdfFile" class="file-name">-->
+<!--          {{ pdfFile.name }}-->
+<!--        </span>-->
       </div>
     </div>
 
     <!-- Barre d'outils principale -->
     <app-pdf-toolbar [canUndo]="canUndo" [canRedo]="canRedo" [totalPages]="totalPages"
       [currentPage]="currentDocument.currentPage" [showTextProperties]="activeTool === 'text'"
-      [textProperties]="textProperties" (toolSelected)="onToolSelected($event)" (undo)="onUndo()" (redo)="onRedo()"
+      [textProperties]="textProperties" [drawingOptions]="drawingOptions" [activeTool]="activeTool"
+      (toolSelected)="onToolSelected($event)" (undo)="onUndo()" (redo)="onRedo()"
       (export)="onExport(false)" (preview)="onPreview()" (save)="onSave()" (load)="onLoad()" (clear)="onClear()"
       (pageChange)="onPageChange($event)" (textPropertiesChange)="onTextPropertiesChange($event)"
-      (toggleProperties)="showProperties = !showProperties">
+      (drawingOptionsChange)="onDrawingOptionsChange($any($event))" (toggleProperties)="showProperties = !showProperties">
     </app-pdf-toolbar>
   </header>
 
@@ -136,21 +137,15 @@
         </div>
         <div style="position: relative;">
           <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
-            [scale]="scale" [activeTool]="activeTool" (pageClick)="onPageClick($event)"
+            [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
+            [drawingOptions]="drawingOptions"
+            (pageClick)="onPageClick($event)"
             (fieldAdded)="onFieldUpdated($event)" (fieldUpdated)="onFieldUpdated($event)"
             (fieldSelected)="onFieldSelected($event)" (fieldTextEdit)="onFieldTextEdit($event)"
-            (fieldDeleted)="onFieldDeleted($event)" (pageRendered)="onPageRendered($event)">
+            (fieldDeleted)="onFieldDeleted($event)" (pageRendered)="onPageRendered($event)"
+            (drawingComplete)="onDrawingComplete($event)" (drawingCancelled)="onDrawingCancelled()"
+            (drawingOptionsChange)="onDrawingOptionsChange($any($event))">
           </app-pdf-viewer>
-
-          <app-drawing-canvas
-            *ngIf="isDrawingMode"
-            [width]="pageDimensions.width * scale"
-            [height]="pageDimensions.height * scale"
-            [drawingTool]="drawingTool"
-            [scale]="scale"
-            (drawingComplete)="onDrawingComplete($event)"
-            (drawingCancelled)="onDrawingCancelled()">
-          </app-drawing-canvas>
         </div>
       </div>
 
@@ -222,9 +217,9 @@
     (validated)="onOtpValidated($event)"
   >
   </app-otp-modal>
-  
-  
-  
+
+
+
 
   <!-- Container de notifications -->
   <app-notification-container></app-notification-container>

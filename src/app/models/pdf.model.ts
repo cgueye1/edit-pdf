@@ -1,6 +1,6 @@
 export interface PDFField {
   id: string;
-  type: 'text' | 'checkbox' | 'signature' | 'image' | 'input' | 'textarea' | 'date' | 'number' | 'email' | 'redact';
+  type: 'text' | 'checkbox' | 'signature' | 'image' | 'input' | 'textarea' | 'date' | 'number' | 'email' | 'redact' | 'mask';
   x: number;
   y: number;
   width: number;
@@ -26,7 +26,16 @@ export interface PDFField {
     max?: number;
     pattern?: string;
   };
+  /** Opacité pour dessin/surlignage */
+  opacity?: number;
+  /** Indique que ce champ est une annotation de dessin (ligne, flèche, rectangle, cercle, surlignage) */
+  isAnnotation?: boolean;
+  /** Indique que cette annotation est un surlignage */
+  isHighlight?: boolean;
+  /** Mode de fusion pour le surligneur (Multiply = type PDFAid, texte teinté) */
+  blendMode?: 'normal' | 'multiply';
 }
+
 
 export interface PDFPage {
   pageNumber: number;

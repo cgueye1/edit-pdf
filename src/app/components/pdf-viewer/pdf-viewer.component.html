@@ -10,33 +10,70 @@
     <canvas #pdfCanvas class="pdf-canvas" (click)="onCanvasClick($event)" [class.has-active-tool]="activeTool" [class.eraser-tool]="activeTool === 'eraser'">
     </canvas>
 
+    <!-- Canvas de dessin (effaceur, surligneur, etc.) - superposé exactement au PDF pour éviter tout décalage -->
+    <app-drawing-canvas
+      *ngIf="isDrawingMode && pageWidth && pageHeight"
+      [width]="pageWidth"
+      [height]="pageHeight"
+      [drawingTool]="drawingTool"
+      [scale]="scale"
+      [drawingColorInput]="drawingOptions.color"
+      [drawingLineWidthInput]="drawingOptions.lineWidth"
+      [drawingOpacityInput]="drawingOptions.opacity"
+      (drawingComplete)="drawingComplete.emit($event)"
+      (drawingCancelled)="drawingCancelled.emit()"
+      (drawingOptionsChange)="drawingOptionsChange.emit($any($event))">
+    </app-drawing-canvas>
+
     <!-- Champs superposés -->
     <div class="fields-layer">
       <div *ngFor="let field of getFieldsForCurrentPage()" class="field-container" [attr.data-field-id]="field.id"
         [ngStyle]="getFieldStyle(field)" [appDraggable]="true" [dragData]="field"
         (dragStart)="onFieldDragStart(field, $event)" (dragging)="onFieldDragging($event)"
-        (dragEnd)="onFieldDragEnd($event)" [appResizable]="((field.type === 'image' || field.type === 'signature' || field.type === 'redact') && selectedField?.id === field.id)" [resizeData]="field"
+        (dragEnd)="onFieldDragEnd($event)" [appResizable]="((field.type === 'image' || field.type === 'signature') && selectedField?.id === field.id)" [resizeData]="field"
         [minWidth]="field.type === 'checkbox' ? 15 : 50" [minHeight]="field.type === 'checkbox' ? 15 : 30" (resizeStart)="onFieldResizeStart(field)" (resizing)="onFieldResizing($event)"
         (resizeEnd)="onFieldResizeEnd($event)" (click)="onFieldContainerClick(field, $event)"
-        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id" [class.redact-field-container]="field.type === 'redact'">
+        [class.selected]="selectedField?.id === field.id" [class.editing]="editingField?.id === field.id" [class.dragging]="isDragging && selectedField?.id === field.id" [class.redact-field-container]="field.type === 'redact'" [class.redact-interactive]="field.type === 'redact'">
 
         <!-- Texte -->
         <div *ngIf="field.type === 'text' && (field.value || editingField?.id === field.id)" class="text-field">
-          <div *ngIf="editingField?.id !== field.id && field.value" (click)="startEditingField(field)" class="text-display">
-            <span>{{ field.value }}</span>
-          </div>
-          <input *ngIf="editingField?.id === field.id" [id]="'text-edit-' + field.id" type="text"
-            [value]="field.value || ''" 
-            [style.fontSize]="(field.fontSize || 14) + 'px'"
+          <!-- Mode affichage : span avec exactement les mêmes styles que l'input -->
+          <div
+            *ngIf="editingField?.id !== field.id && field.value"
+            (click)="startEditingField(field)"
+            class="text-display"
+            [style.fontSize]="(field.fontSize || 8) + 'px'"
             [style.color]="field.color || '#000000'"
-            [style.fontFamily]="field.fontFamily || 'Helvetica'"
-            [style.fontWeight]="field.bold ? 'bold' : 'normal'"
+            [style.fontFamily]="field.fontFamily || 'Calibri, sans-serif'"
+            [style.fontWeight]="field.bold === true ? 'bold' : 'normal'"
             [style.fontStyle]="field.italic ? 'italic' : 'normal'"
             [style.textDecoration]="field.underline ? 'underline' : 'none'"
+            [style.lineHeight]="'1.2'"
+            [style.whiteSpace]="'pre'">
+            {{ field.value }}
+          </div>
+
+          <!-- Mode édition : input transparent, mêmes styles -->
+          <input
+            *ngIf="editingField?.id === field.id"
+            [id]="'text-edit-' + field.id"
+            type="text"
+            [value]="field.value || ''"
+            [style.fontSize]="(field.fontSize || 8) + 'px'"
+            [style.color]="field.color || '#000000'"
+            [style.fontFamily]="field.fontFamily || 'Calibri, sans-serif'"
+            [style.fontWeight]="field.bold === true ? 'bold' : 'normal'"
+            [style.fontStyle]="field.italic ? 'italic' : 'normal'"
+            [style.textDecoration]="field.underline ? 'underline' : 'none'"
+            [style.lineHeight]="'1.2'"
+            [style.minWidth]="'80px'"
             (blur)="onTextEditBlur(field, $any($event.target).value)"
             (keydown)="onTextEditKeydown(field, $event, $any($event.target).value)"
-            (input)="onTextInput(field, $any($event.target).value)" class="text-edit-input"
-            (click)="$event.stopPropagation()" autocomplete="off" placeholder="Tapez votre texte...">
+            (input)="onTextInput(field, $any($event.target).value)"
+            class="text-edit-input"
+            (click)="$event.stopPropagation()"
+            autocomplete="off"
+            placeholder="">
         </div>
 
         <!-- Case à cocher -->
@@ -81,8 +118,8 @@
           </div>
         </div>
 
-        <!-- Image -->
-        <div *ngIf="field.type === 'image'" class="image-field">
+        <!-- Image (dessin/surlignage ou image insérée) -->
+        <div *ngIf="field.type === 'image'" class="image-field" [class.image-field-drawing]="field.id.startsWith('drawing_')" [class.image-field-highlight]="field.isHighlight" [class.blend-normal]="field.isHighlight ">
           <img [src]="field.value" [alt]="'Image ' + field.id">
         </div>
 
@@ -94,21 +131,21 @@
         <!-- Date field -->
         <div *ngIf="field.type === 'date'" class="date-field">
           <input [id]="'date-edit-' + field.id" type="date"
-            [value]="getDateValue(field.value)" 
-            [style.fontSize]="(field.fontSize || 14) + 'px'"
-            [style.color]="field.color || '#000000'"
-            [style.fontFamily]="field.fontFamily || 'Helvetica'"
-            [style.fontWeight]="field.bold ? 'bold' : 'normal'"
+            [value]="getDateValue(field.value)"
+            [style.fontSize]="(field.fontSize || 8) + 'px'"
+            [style.color]="field.color || '#333333'"
+            [style.fontFamily]="field.fontFamily || 'Calibri, sans-serif'"
+            [style.fontWeight]="field.bold === true ? 'bold' : 'normal'"
             [style.fontStyle]="field.italic ? 'italic' : 'normal'"
             [style.textDecoration]="field.underline ? 'underline' : 'none'"
             (change)="onDateChange(field, $any($event.target).value)"
-            (click)="$event.stopPropagation()" 
+            (click)="$event.stopPropagation()"
             class="date-input"
             placeholder="jj/mm/aaaa">
         </div>
 
-        <!-- Bloc de caviardage (redact) - visible seulement si l'outil effaceur est actif -->
-        <div *ngIf="field.type === 'redact'" class="redact-field" [style.display]="activeTool === 'eraser' ? 'block' : 'none'"></div>
+        <!-- Bloc de caviardage (redact) - toujours visible, zone blanche sans bordure pour écrire dessus -->
+        <div *ngIf="field.type === 'redact'" class="redact-field"></div>
 
       </div>
     </div>
