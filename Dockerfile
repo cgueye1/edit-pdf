@@ -12,7 +12,7 @@ RUN npm run build --configuration=production
 
 FROM nginx:alpine
 
-COPY --from=builder /app/dist/secure-link/browser /usr/share/nginx/html
+COPY --from=builder /app/dist/pdf-editor-app/browser /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/nginx.conf
 
