@@ -8,6 +8,7 @@ import { environment } from '../../environments/environment.prod';
 })
 export class DocsService {
   private apiUrl = `${environment.apiUrl}/api/docs`;
+  private secureLinkApi = `${environment.apiUrl}/api`;
 
   constructor(private http: HttpClient) {}
 
@@ -19,7 +20,7 @@ export class DocsService {
     return this.http.post(`${this.apiUrl}/${docId}/signed`, formData);
   }
 
-  // marquer une signature
+  // marquer une signature (Solimus ou Secure Link selon environment.useSecureLink)
   markSignature(
     documentId: number,
     userId: number,
@@ -27,11 +28,18 @@ export class DocsService {
     signatureNotes: string = '',
   ): Observable<any> {
     const formData = new FormData();
+    formData.append('signedPdf', file);
+
+    if ((environment as any).useSecureLink) {
+      // Secure Link : adapter l’endpoint selon votre API (ex. demande, document client)
+      formData.append('documentId', documentId.toString());
+      formData.append('signatureNotes', signatureNotes);
+      return this.http.post(`${this.secureLinkApi}/clients/documents/signed`, formData);
+    }
+
     formData.append('documentId', documentId.toString());
     formData.append('userId', userId.toString());
-    formData.append('signedPdf', file);
     formData.append('signatureNotes', signatureNotes);
-
     return this.http.post(`${this.apiUrl}/signature/mark`, formData);
   }
 }

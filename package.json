@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:securelink": "ng build --configuration production-securelink",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

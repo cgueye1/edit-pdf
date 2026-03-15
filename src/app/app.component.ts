@@ -90,6 +90,19 @@ export class AppComponent implements OnInit {
   pdfUrl: string = '';
   pdfData: ArrayBuffer | null = null;
 
+  /** Mode multi-PDF (Secure-Link): liste de documents à éditer dans des onglets. */
+  pdfDocs: Array<{ label: string; url: string }> = [];
+  activePdfDocIndex = 0;
+  /** Contexte Secure-Link : titre (formulaire) et sous-titre (organisation). */
+  formTitle = '';
+  formSubtitle = '';
+  /** URL de retour (Secure-Link) quand on ouvre l’app en fenêtre directe (pas en iframe). */
+  returnUrl = '';
+  private pdfDocSessions = new Map<
+    string,
+    { document: PDFDocumentState; history: any }
+  >();
+
   activeTool: string | null = null;
   showSignaturePad = false;
   pendingSignaturePosition: { x: number; y: number; page: number } | null = null;
@@ -252,7 +265,51 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {
+      const docsParam = params['docs'];
+      const directUrl = params['url'];
       const encryptedParam = params['pdfurl'];
+
+      if (docsParam) {
+        // ── Mode Secure Link (multi-PDF): liste de docs [{label,url}] ─────────
+        try {
+          const decoded = decodeURIComponent(String(docsParam));
+          const parsed = JSON.parse(decoded);
+          if (Array.isArray(parsed)) {
+            this.pdfDocs = parsed
+              .map((d: any) => ({ label: String(d?.label ?? 'PDF'), url: String(d?.url ?? '') }))
+              .filter((d: any) => d.url && (d.url.startsWith('http://') || d.url.startsWith('https://')));
+          } else {
+            this.pdfDocs = [];
+          }
+        } catch (_) {
+          this.pdfDocs = [];
+        }
+        this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
+        this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
+        this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
+        if (this.pdfDocs.length > 0) {
+          this.activePdfDocIndex = 0;
+          this.switchToPdfDoc(0);
+          return;
+        }
+      }
+      if (directUrl) {
+        // ── Mode Secure Link (ou autre) : URL directe du PDF ─────────────────
+        this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
+        this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
+        this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
+        try {
+          const decoded = decodeURIComponent(directUrl);
+          if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
+            this.loadPdfFromUrl(decoded);
+          } else {
+            this.notificationService.error('URL du PDF invalide.');
+          }
+        } catch (e) {
+          this.notificationService.error('URL du PDF invalide.');
+        }
+        return;
+      }
 
       if (encryptedParam) {
         // ── Mode Solimus : lien chiffré ──────────────────────────────────────
@@ -278,6 +335,67 @@ export class AppComponent implements OnInit {
         this.historyService.loadFromLocalStorage();
       }
     });
+  }
+
+  /** True si on est sur le dernier document (bouton affiche « Terminé »). */
+  get isOnLastDocument(): boolean {
+    return this.pdfDocs.length > 0 && this.activePdfDocIndex === this.pdfDocs.length - 1;
+  }
+
+  /** Suivant : passe au document suivant ; sur le dernier, appelle onTermine(). */
+  onSuivantOrTermine(): void {
+    if (this.pdfDocs.length === 0) return;
+    if (this.isOnLastDocument) {
+      this.onTermine();
+      return;
+    }
+    this.switchToPdfDoc(this.activePdfDocIndex + 1);
+  }
+
+  /** Change d'onglet PDF (multi-PDF) en conservant l'état de chaque doc. */
+  switchToPdfDoc(index: number): void {
+    if (!this.pdfDocs || index < 0 || index >= this.pdfDocs.length) return;
+
+    // Sauvegarder la session courante
+    const currentKey = this.pdfDocs[this.activePdfDocIndex]?.url;
+    if (currentKey) {
+      try {
+        this.pdfDocSessions.set(currentKey, {
+          document: { ...this.currentDocument },
+          history: this.historyService.getHistory(),
+        });
+      } catch (_) {}
+    }
+
+    this.activePdfDocIndex = index;
+    const target = this.pdfDocs[index];
+
+    // Restaurer une session si elle existe, sinon init
+    const saved = this.pdfDocSessions.get(target.url);
+    if (saved?.document) {
+      this.currentDocument = {
+        ...saved.document,
+        updatedAt: new Date(saved.document.updatedAt),
+        createdAt: new Date(saved.document.createdAt),
+      };
+      try {
+        this.historyService.setHistory(saved.history);
+      } catch (_) {}
+      this.updateHistoryButtons();
+    } else {
+      this.historyService.clearHistory();
+      this.currentDocument = {
+        id: this.generateId(),
+        name: target.label || 'Document',
+        fields: [],
+        currentPage: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.updateHistoryButtons();
+    }
+
+    this.loadPdfFromUrl(target.url);
   }
 
   // ─── Chargement fichier ───────────────────────────────────────────────────
@@ -800,6 +918,21 @@ export class AppComponent implements OnInit {
 
   onTermine(): void {
     this.showOtpModal = true;
+  }
+
+  /** Retour : si en iframe, notifie le parent ; sinon redirige vers returnUrl ou history.back(). */
+  notifyParentClose(): void {
+    try {
+      if (typeof window !== 'undefined' && window.parent !== window) {
+        window.parent.postMessage({ type: 'secure-link-close-pdf-editor' }, '*');
+        return;
+      }
+      if (this.returnUrl) {
+        window.location.href = this.returnUrl;
+        return;
+      }
+      window.history.back();
+    } catch (_) {}
   }
 
   onLoad(): void {

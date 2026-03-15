@@ -1,13 +1,39 @@
 <div class="app-container">
   <!-- En-tête avec toolbar -->
   <header class="app-header-wrapper">
-    <div class="app-header">
+    <div class="app-header"  >
+    <div class="header-left">
+      <div class="header-logo-wrap">
+        <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
+      </div>
+    </div>
+    <!-- Contexte Secure-Link : retour + titre + sous-titre + Suivant / Terminé -->
+    <div class="pdf-context-bar" *ngIf="formTitle">
+      <button type="button" class="pdf-context-back" (click)="notifyParentClose()" title="Retour">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="pdf-context-titles">
+        <span class="pdf-context-title">{{ formTitle }}</span>
+        <span class="pdf-context-subtitle" *ngIf="formSubtitle">{{ formSubtitle }}</span>
+      </div>
+      <!-- Suivant : passe au document suivant ; sur le dernier, affiche Terminé et termine -->
+      <button class="btn-upload btn-suivant-terminer" (click)="onSuivantOrTermine()" [title]="isOnLastDocument ? 'Terminer' : 'Document suivant'">
+        <ng-container *ngIf="isOnLastDocument">
+          <i class="fas fa-check-circle"></i>
+          Terminé
+        </ng-container>
+        <ng-container *ngIf="!isOnLastDocument">
+          Suivant
+          <i class="fas fa-chevron-right"></i>
+        </ng-container>
+      </button>
+    </div>
+    </div>
+    <div class="app-header" *ngIf="!formTitle">
       <div class="header-left">
-        <h1>
-          <img src="assets/pdf-icon.png" alt="PDF" class="pdf-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <i class="fas fa-file-pdf text-danger" style="display: none;"></i>
-         SECURE
-        </h1>
+        <div class="header-logo-wrap">
+          <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
+        </div>
         <div class="document-info" *ngIf="pdfFile">
           <button class="document-name-btn" (click)="openPdfInfoModal()" title="Voir les informations du PDF">
             <i class="fas fa-info-circle"></i>
@@ -25,10 +51,21 @@
           <i class="fas fa-check-circle"></i>
           Terminé
         </button>
-<!--        <span *ngIf="pdfFile" class="file-name">-->
-<!--          {{ pdfFile.name }}-->
-<!--        </span>-->
       </div>
+    </div>
+
+    <!-- Onglets multi-PDF (Secure-Link) : libellé uniquement -->
+    <div class="pdf-doc-tabs" *ngIf="pdfDocs.length > 1">
+      <button
+        class="pdf-doc-tab"
+        *ngFor="let d of pdfDocs; let i = index"
+        (click)="switchToPdfDoc(i)"
+        [class.active]="i === activePdfDocIndex"
+        type="button"
+        [title]="d.label"
+      >
+        {{ d.label }}
+      </button>
     </div>
 
     <!-- Barre d'outils principale -->

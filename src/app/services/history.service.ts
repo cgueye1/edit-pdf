@@ -93,6 +93,13 @@ export class HistoryService {
     return this.deepCopy(this.state);
   }
 
+  /**
+   * Remplace complètement l'historique courant (utile pour gérer plusieurs documents).
+   */
+  setHistory(state: HistoryState): void {
+    this.state = this.deepCopy(state);
+  }
+
   loadFromLocalStorage(): void {
     const saved = localStorage.getItem('pdfEditorHistory');
     if (saved) {

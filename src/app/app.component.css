@@ -18,6 +18,105 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Contexte Secure-Link : retour + titre + sous-titre + Terminer ✓ */
+.pdf-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f7;
+}
+.pdf-context-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #0ea5a5;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.pdf-context-back:hover {
+  background: #0d9494;
+}
+.pdf-context-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.pdf-context-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.pdf-context-subtitle {
+  font-size: 13px;
+  color: #64748b;
+}
+.pdf-context-bar .btn-terminer,
+.pdf-context-bar .btn-suivant-terminer {
+  flex-shrink: 0;
+  background: #0ea5a5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s;
+}
+.pdf-context-bar .btn-terminer:hover,
+.pdf-context-bar .btn-suivant-terminer:hover {
+  background: #0d9494;
+}
+
+/* Onglets multi-PDF (Secure-Link) : texte uniquement */
+.pdf-doc-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 10px;
+  overflow-x: auto;
+  border-top: 1px solid #eef2f7;
+  background: #ffffff;
+}
+
+.pdf-doc-tab {
+  appearance: none;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pdf-doc-tab:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.pdf-doc-tab.active {
+  background: #0ea5a5;
+  border-color: #0ea5a5;
+  color: #ffffff;
+}
+
 /* Header moderne */
 .app-header {
   background: #ffffff;
@@ -30,6 +129,18 @@
     display: flex;
     align-items: center;
     gap: 24px;
+  }
+
+  .header-logo-wrap {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-logo {
+    height: 32px;
+    width: auto;
+    max-width: 120px;
+    object-fit: contain;
   }
 
   h1 {

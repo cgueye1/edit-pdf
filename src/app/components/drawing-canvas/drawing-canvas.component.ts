@@ -23,11 +23,16 @@ import { CommonModule } from '@angular/common';
     </canvas>
   `,
   styles: [`
+    :host {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
     .drawing-canvas {
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1000;
       pointer-events: auto;
     }
   `]
@@ -241,11 +246,16 @@ export class DrawingCanvasComponent implements AfterViewInit, OnChanges, OnDestr
       // On stocke le vrai x mais fixedY pour garder la trace horizontale
       this.currentPath.push({ x, y: fixedY });
 
-    } else {
-      // Dessin libre : courbe lissée, suit la souris normalement
-      this.ctx.quadraticCurveTo(last.x, last.y, x, y);
-      this.ctx.stroke();
+    } else if (this.drawingTool === 'draw') {
+      // Dessin libre : réappliquer le style puis redessiner tout le tracé (plus fiable)
+      this.applyStyle();
       this.currentPath.push({ x, y });
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.currentPath[0].x, this.currentPath[0].y);
+      for (let i = 1; i < this.currentPath.length; i++) {
+        this.ctx.lineTo(this.currentPath[i].x, this.currentPath[i].y);
+      }
+      this.ctx.stroke();
     }
   }
 
@@ -350,14 +360,21 @@ export class DrawingCanvasComponent implements AfterViewInit, OnChanges, OnDestr
       const cropMinY = hlHeight
         ? Math.max(0, this.startY - hlHeight / 2 - 2)
         : Math.max(0, pyMin - pad);
-      const cropH = hlHeight
+      let cropH = hlHeight
         ? hlHeight + 4
-        : Math.min(this.height - cropMinY, pyMax - pyMin + 2 * pad);
+        : Math.min(this.height - cropMinY, Math.max(pyMax - pyMin + 2 * pad, 2 * pad));
+      let cropW = Math.min(this.width, Math.max(pxMax - pxMin + 2 * pad, 2 * pad));
+      // Pour le dessin libre : garantir une taille minimale pour que emitCroppedRegion émette (w/h >= 1)
+      if (this.drawingTool === 'draw') {
+        const minSize = 2 * pad;
+        cropW = Math.min(this.width, Math.max(cropW, minSize));
+        cropH = Math.min(this.height - cropMinY, Math.max(cropH, minSize));
+      }
 
       this.emitCroppedRegion(
         Math.max(0, pxMin - pad),
         cropMinY,
-        Math.min(this.width, pxMax - pxMin + 2 * pad),
+        cropW,
         cropH,
       );
       return;
