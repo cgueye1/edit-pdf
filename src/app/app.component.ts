@@ -1049,12 +1049,17 @@ export class AppComponent implements OnInit {
           error: (err) => {
             console.error(err);
             this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
+            // Même en cas d'erreur (ex: 401 non authentifié), on ferme l'éditeur
+            // pour revenir au wizard Secure Link qui pourra gérer l'état.
+            this.notifyParentClose();
           },
         });
       })
       .catch((err) => {
         console.error(err);
         this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
+        // Si l'export échoue, on ferme tout de même l'éditeur pour ne pas bloquer l'utilisateur.
+        this.notifyParentClose();
       });
   }
 
