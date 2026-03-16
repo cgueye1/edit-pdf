@@ -264,16 +264,25 @@
   </app-pdf-preview-modal>
 
   <!-- Modal OTP -->
-<app-otp-modal
+  <app-otp-modal
     [isOpen]="showOtpModal"
     [phoneNumber]="userPhoneNumber"
     (closed)="onOtpModalClosed()"
-    (validated)="onOtpValidated($event)"
-  >
+    (validated)="onOtpValidated($event)">
   </app-otp-modal>
 
-
-
+  <!-- Modal Confirmation de saisie (Secure Link) : Modifier / Confirmer → envoi PDF puis redirection -->
+  <div class="modal-overlay" *ngIf="showConfirmTermineModal" (click)="onConfirmTermineModifier()">
+    <div class="modal modal-confirm-terminer" (click)="$event.stopPropagation()">
+      <h2>Confirmation de saisie du formulaire</h2>
+      <p class="modal-confirm-icon" aria-hidden="true"><i class="fas fa-exclamation-circle"></i></p>
+      <p class="modal-confirm-text">Êtes-vous certain(e) d'avoir correctement rempli l'ensemble des formulaires ?</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn-modifier" (click)="onConfirmTermineModifier()">Modifier</button>
+        <button type="button" class="btn-confirmer" (click)="onConfirmTermineConfirmer()">Confirmer</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Container de notifications -->
   <app-notification-container></app-notification-container>

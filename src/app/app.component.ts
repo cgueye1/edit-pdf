@@ -142,6 +142,8 @@ export class AppComponent implements OnInit {
   showPdfInfoModal = false;
   showPdfPreviewModal = false;
   showOtpModal = false;
+  /** Modal « Confirmation de saisie du formulaire » (Secure Link) : Modifier / Confirmer avant envoi et redirection. */
+  showConfirmTermineModal = false;
   previewPdfUrl: string = '';
   isDrawingMode = false;
   drawingTool: string | null = null;
@@ -372,12 +374,15 @@ export class AppComponent implements OnInit {
     return this.pdfDocs.length > 0 && this.activePdfDocIndex === this.pdfDocs.length - 1;
   }
 
-  /** Suivant : passe au document suivant ; sur le dernier, appelle onTermine(). */
+  /** Suivant : enregistre le document courant côté serveur (si requestId), puis passe au suivant ; sur le dernier, appelle onTermine(). */
   onSuivantOrTermine(): void {
     if (this.pdfDocs.length === 0) return;
     if (this.isOnLastDocument) {
       this.onTermine();
       return;
+    }
+    if (this.requestId && this.pdfUrl) {
+      this.uploadCurrentDocToRequest(true);
     }
     this.switchToPdfDoc(this.activePdfDocIndex + 1);
   }
@@ -387,7 +392,9 @@ export class AppComponent implements OnInit {
     if (!this.pdfDocs || index < 0 || index >= this.pdfDocs.length) return;
 
     // Sauvegarder la session courante
-    const currentKey = this.pdfDocs[this.activePdfDocIndex]?.url;
+    // ⚠️ Utiliser l'index comme clé plutôt que l'URL,
+    // car plusieurs documents peuvent partager la même URL
+    const currentKey = String(this.activePdfDocIndex);
     if (currentKey) {
       try {
         this.pdfDocSessions.set(currentKey, {
@@ -401,7 +408,8 @@ export class AppComponent implements OnInit {
     const target = this.pdfDocs[index];
 
     // Restaurer une session si elle existe, sinon init
-    const saved = this.pdfDocSessions.get(target.url);
+    const targetKey = String(index);
+    const saved = this.pdfDocSessions.get(targetKey);
     if (saved?.document) {
       this.currentDocument = {
         ...saved.document,
@@ -947,15 +955,57 @@ export class AppComponent implements OnInit {
   }
 
   onTermine(): void {
-    if (this.requestId && this.pdfUrl) {
-      this.uploadFilledPdfAndClose();
+    const isSecureLinkForm = (this.formTitle || this.pdfDocs.length > 0) && !!this.pdfUrl;
+    if (isSecureLinkForm) {
+      this.showConfirmTermineModal = true;
       return;
     }
-    this.showOtpModal = true;
+
+  }
+
+  onConfirmTermineModifier(): void {
+    this.showConfirmTermineModal = false;
+  }
+
+  onConfirmTermineConfirmer(): void {
+    this.showConfirmTermineModal = false;
+    if (this.requestId && this.pdfUrl) {
+      this.uploadFilledPdfAndClose();
+    } else {
+      this.notificationService.success('Formulaire terminé.');
+      this.notifyParentClose();
+    }
+  }
+
+  /** Enregistre le document courant côté serveur (sans redirection). Appelé au clic sur Suivant. */
+  private uploadCurrentDocToRequest(silent: boolean): void {
+    const filename = `${this.currentDocument.name || 'document'}.pdf`;
+    this.pdfService
+      .exportPdf(this.currentDocument.fields, filename, false, false)
+      .then((blob) => {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file).subscribe({
+          next: () => {
+            if (!silent) this.notificationService.success('Document enregistré.');
+          },
+          error: (err) => {
+            console.error(err);
+            if (!silent) this.notificationService.error('Erreur lors de l\'enregistrement.');
+          },
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!silent) this.notificationService.error('Erreur lors de l\'enregistrement.');
+      });
   }
 
   /** Exporte le document courant, l'envoie à Secure Link (requestId), puis redirige. */
   private uploadFilledPdfAndClose(): void {
+    if (!this.requestId) {
+      this.notifyParentClose();
+      return;
+    }
     const filename = `${this.currentDocument.name || 'document'}.pdf`;
     this.pdfService
       .exportPdf(this.currentDocument.fields, filename, false, false)

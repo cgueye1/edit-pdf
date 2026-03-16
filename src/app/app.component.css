@@ -1083,3 +1083,82 @@ app-pdf-toolbar {
   border-bottom: 1px solid #eef2f7;
 }
 
+/* Modal Confirmation de saisie du formulaire (Secure Link) */
+.app-container .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.app-container .modal-confirm-terminer {
+  width: 420px;
+  max-width: 92vw;
+  background: white;
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.app-container .modal-confirm-terminer h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a1f;
+}
+
+.app-container .modal-confirm-icon {
+  color: #f59e0b;
+  font-size: 2rem;
+  margin: 8px 0 16px 0;
+}
+
+.app-container .modal-confirm-text {
+  font-size: 0.95rem;
+  color: #4a5568;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.app-container .modal-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.app-container .modal-confirm-actions .btn-modifier {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.app-container .modal-confirm-actions .btn-modifier:hover {
+  background: #f1f5f9;
+}
+
+.app-container .modal-confirm-actions .btn-confirmer {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #23A3A6;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.app-container .modal-confirm-actions .btn-confirmer:hover {
+  background: #1e8f92;
+}
+
