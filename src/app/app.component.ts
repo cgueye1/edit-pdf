@@ -98,6 +98,8 @@ export class AppComponent implements OnInit {
   formSubtitle = '';
   /** URL de retour (Secure-Link) quand on ouvre l’app en fenêtre directe (pas en iframe). */
   returnUrl = '';
+  /** ID de la demande Secure Link : si présent, on envoie le PDF rempli à l'API au clic sur Terminé. */
+  requestId = '';
   private pdfDocSessions = new Map<
     string,
     { document: PDFDocumentState; history: any }
@@ -287,6 +289,7 @@ export class AppComponent implements OnInit {
         this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
         this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
         this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
+        this.requestId = params['requestId'] ? decodeURIComponent(String(params['requestId'])) : '';
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
           this.switchToPdfDoc(0);
@@ -298,6 +301,7 @@ export class AppComponent implements OnInit {
         this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
         this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
         this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
+        this.requestId = params['requestId'] ? decodeURIComponent(String(params['requestId'])) : '';
         try {
           const decoded = decodeURIComponent(directUrl);
           if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
@@ -917,7 +921,35 @@ export class AppComponent implements OnInit {
   }
 
   onTermine(): void {
+    if (this.requestId && this.pdfUrl) {
+      this.uploadFilledPdfAndClose();
+      return;
+    }
     this.showOtpModal = true;
+  }
+
+  /** Exporte le document courant, l'envoie à Secure Link (requestId), puis redirige. */
+  private uploadFilledPdfAndClose(): void {
+    const filename = `${this.currentDocument.name || 'document'}.pdf`;
+    this.pdfService
+      .exportPdf(this.currentDocument.fields, filename, false, false)
+      .then((blob) => {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file).subscribe({
+          next: () => {
+            this.notificationService.success('PDF enregistré.');
+            this.notifyParentClose();
+          },
+          error: (err) => {
+            console.error(err);
+            this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
+          },
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
+      });
   }
 
   /** Retour : si en iframe, notifie le parent ; sinon redirige vers returnUrl ou history.back(). */
