@@ -403,9 +403,11 @@ export class AppComponent implements OnInit {
 
     // Sauvegarder la session courante
     // ⚠️ Utiliser l'index comme clé plutôt que l'URL,
-    // car plusieurs documents peuvent partager la même URL
+    // car plusieurs documents peuvent partager la même URL.
+    // Ne rien sauvegarder tant qu'aucun PDF n'est chargé (pdfUrl vide),
+    // sinon on empêche le premier chargement depuis l'URL distante.
     const currentKey = String(this.activePdfDocIndex);
-    if (currentKey) {
+    if (this.pdfUrl && currentKey) {
       try {
         this.pdfDocSessions.set(currentKey, {
           document: { ...this.currentDocument },
@@ -427,7 +429,9 @@ export class AppComponent implements OnInit {
     // Restaurer une session si elle existe, sinon init
     const targetKey = String(index);
     const saved = this.pdfDocSessions.get(targetKey);
-    if (saved?.document) {
+    // Restaurer uniquement si on a déjà un état de vue valide (pdfUrl défini),
+    // sinon on doit charger le PDF depuis l'URL distante.
+    if (saved?.document && saved.viewState?.pdfUrl) {
       this.currentDocument = {
         ...saved.document,
         updatedAt: new Date(saved.document.updatedAt),
