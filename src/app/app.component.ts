@@ -265,11 +265,35 @@ export class AppComponent implements OnInit {
       });
   }
 
+  /** Lit les query params depuis l'URL du navigateur (fallback si le routeur ne les fournit pas). */
+  private getQueryParams(): Record<string, string> {
+    const fromRoute: Record<string, string> = {};
+    try {
+      this.route.snapshot.queryParamMap.keys.forEach((k) => {
+        const v = this.route.snapshot.queryParamMap.get(k);
+        if (v != null) fromRoute[k] = v;
+      });
+    } catch (_) {}
+    if (Object.keys(fromRoute).length > 0) return fromRoute;
+    const fromWindow: Record<string, string> = {};
+    try {
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      if (search) {
+        new URLSearchParams(search).forEach((value, key) => {
+          fromWindow[key] = value;
+        });
+      }
+    } catch (_) {}
+    return Object.keys(fromWindow).length > 0 ? fromWindow : fromRoute;
+  }
+
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      const docsParam = params['docs'];
-      const directUrl = params['url'];
-      const encryptedParam = params['pdfurl'];
+    const winParams = this.getQueryParams();
+    const applyParams = (routeParams: Record<string, string>) => {
+      const p = (key: string) => routeParams[key] ?? winParams[key];
+      const docsParam = p('docs');
+      const directUrl = p('url');
+      const encryptedParam = p('pdfurl');
 
       if (docsParam) {
         // ── Mode Secure Link (multi-PDF): liste de docs [{label,url}] ─────────
@@ -286,10 +310,10 @@ export class AppComponent implements OnInit {
         } catch (_) {
           this.pdfDocs = [];
         }
-        this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
-        this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
-        this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
-        this.requestId = params['requestId'] ? decodeURIComponent(String(params['requestId'])) : '';
+        this.formTitle = p('title') ? decodeURIComponent(String(p('title'))) : '';
+        this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
+        this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
+        this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
           this.switchToPdfDoc(0);
@@ -298,10 +322,10 @@ export class AppComponent implements OnInit {
       }
       if (directUrl) {
         // ── Mode Secure Link (ou autre) : URL directe du PDF ─────────────────
-        this.formTitle = params['title'] ? decodeURIComponent(String(params['title'])) : '';
-        this.formSubtitle = params['subtitle'] ? decodeURIComponent(String(params['subtitle'])) : '';
-        this.returnUrl = params['returnUrl'] ? decodeURIComponent(String(params['returnUrl'])) : '';
-        this.requestId = params['requestId'] ? decodeURIComponent(String(params['requestId'])) : '';
+        this.formTitle = p('title') ? decodeURIComponent(String(p('title'))) : '';
+        this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
+        this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
+        this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         try {
           const decoded = decodeURIComponent(directUrl);
           if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
@@ -338,7 +362,9 @@ export class AppComponent implements OnInit {
         // ── Mode standalone : pas de pdfurl ─────────────────────────────────
         this.historyService.loadFromLocalStorage();
       }
-    });
+    };
+    applyParams(winParams);
+    this.route.queryParams.subscribe((routeParams) => applyParams(routeParams));
   }
 
   /** True si on est sur le dernier document (bouton affiche « Terminé »). */

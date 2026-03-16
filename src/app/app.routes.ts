@@ -5,20 +5,13 @@ import { AppComponent } from './app.component';
  * Routes pour l'éditeur PDF.
  *
  * Important pour Secure-Link :
- * - on doit pouvoir appeler directement la racine "/?docs=...&title=...&subtitle=...&returnUrl=..."
- *   sans redirection qui supprime les query params.
- *
- * Du coup, on monte l'AppComponent sur la racine '' (et on garde '/admin' pour compat).
+ * - on doit pouvoir appeler directement "/?docs=..." ou "/pdf/?docs=..." (base /pdf/)
+ *   sans perdre les query params.
  */
 export const routes: Routes = [
-  {
-    path: '',
-    component: AppComponent,
-  },
-  {
-    path: 'admin',
-    component: AppComponent,
-  },
+  { path: '', component: AppComponent },
+  { path: 'pdf', component: AppComponent },
+  { path: 'admin', component: AppComponent },
 ];
 
 
