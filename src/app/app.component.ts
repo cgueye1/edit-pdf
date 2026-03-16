@@ -102,7 +102,17 @@ export class AppComponent implements OnInit {
   requestId = '';
   private pdfDocSessions = new Map<
     string,
-    { document: PDFDocumentState; history: any }
+    {
+      document: PDFDocumentState;
+      history: any;
+      viewState?: {
+        pdfUrl: string;
+        pdfData: ArrayBuffer | null;
+        totalPages: number;
+        pageDimensions: { width: number; height: number };
+        scale: number;
+      };
+    }
   >();
 
   activeTool: string | null = null;
@@ -400,6 +410,13 @@ export class AppComponent implements OnInit {
         this.pdfDocSessions.set(currentKey, {
           document: { ...this.currentDocument },
           history: this.historyService.getHistory(),
+          viewState: {
+            pdfUrl: this.pdfUrl,
+            pdfData: this.pdfData,
+            totalPages: this.totalPages,
+            pageDimensions: { ...this.pageDimensions },
+            scale: this.scale,
+          },
         });
       } catch (_) {}
     }
@@ -419,6 +436,16 @@ export class AppComponent implements OnInit {
       try {
         this.historyService.setHistory(saved.history);
       } catch (_) {}
+      if (saved.viewState) {
+        this.pdfUrl = saved.viewState.pdfUrl;
+        this.pdfData = saved.viewState.pdfData || null;
+        this.totalPages = saved.viewState.totalPages;
+        this.pageDimensions = { ...saved.viewState.pageDimensions };
+        this.scale = saved.viewState.scale;
+        if (this.pdfData && this.totalPages > 0) {
+          this.generateThumbnails();
+        }
+      }
       this.updateHistoryButtons();
     } else {
       this.historyService.clearHistory();
@@ -431,9 +458,8 @@ export class AppComponent implements OnInit {
         updatedAt: new Date(),
       };
       this.updateHistoryButtons();
+      this.loadPdfFromUrl(target.url);
     }
-
-    this.loadPdfFromUrl(target.url);
   }
 
   // ─── Chargement fichier ───────────────────────────────────────────────────
