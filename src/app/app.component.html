@@ -1,60 +1,63 @@
 <div class="app-container">
   <!-- En-tête avec toolbar -->
   <header class="app-header-wrapper">
-    <div class="app-header"  >
-    <div class="header-left">
+
+    <!-- LIGNE 1 : Logo + Contexte + Bouton Suivant -->
+    <div class="app-header-top">
+
+      <!-- Logo -->
       <div class="header-logo-wrap">
         <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
       </div>
-    </div>
-    <!-- Contexte Secure-Link : retour + titre + sous-titre + Suivant / Terminé -->
-    <div class="pdf-context-bar" *ngIf="formTitle">
-      <button type="button" class="pdf-context-back" (click)="notifyParentClose()" title="Retour">
-        <i class="fas fa-arrow-left"></i>
-      </button>
-      <div class="pdf-context-titles">
-        <span class="pdf-context-title">{{ formTitle }}</span>
-        <span class="pdf-context-subtitle" *ngIf="formSubtitle">{{ formSubtitle }}</span>
-      </div>
-      <!-- Suivant : passe au document suivant ; sur le dernier, affiche Terminé et termine -->
-      <button class="btn-upload btn-suivant-terminer" (click)="onSuivantOrTermine()" [title]="isOnLastDocument ? 'Terminer' : 'Document suivant'">
-        <ng-container *ngIf="isOnLastDocument">
-          <i class="fas fa-check-circle"></i>
-          Terminé
-        </ng-container>
-        <ng-container *ngIf="!isOnLastDocument">
-          Suivant
-          <i class="fas fa-chevron-right"></i>
-        </ng-container>
-      </button>
-    </div>
-    </div>
-    <div class="app-header" *ngIf="!formTitle">
-      <div class="header-left">
-        <div class="header-logo-wrap">
-          <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
-        </div>
-        <div class="document-info" *ngIf="pdfFile">
-          <button class="document-name-btn" (click)="openPdfInfoModal()" title="Voir les informations du PDF">
-            <i class="fas fa-info-circle"></i>
-            {{ currentDocument.name }}
+
+      <!-- Titre + sous-titre (centré) -->
+      <div class="pdf-context-titles" *ngIf="formTitle">
+        <div class="flex items-center gap-2">
+          <button type="button" class="pdf-context-back" (click)="notifyParentClose()" title="Retour">
+            <i class="fas fa-arrow-left"></i>
           </button>
-          <span class="document-stats">
-            <i class="fas fa-layer-group"></i>
-            {{ currentDocument.fields.length }} éléments
-          </span>
+          <div>
+            <span class="pdf-context-title">{{ formTitle }}</span>
+            <span class="pdf-context-subtitle" *ngIf="formSubtitle">{{ formSubtitle }}</span>
+          </div>
         </div>
       </div>
 
-      <div class="header-right">
-        <button class="btn-upload" (click)="onTermine()" title="Terminé">
+      <!-- Bouton Suivant / Terminé -->
+      <div class="header-right" *ngIf="formTitle">
+        <button class="btn-suivant-terminer" (click)="onSuivantOrTermine()"
+                [title]="isOnLastDocument ? 'Terminer' : 'Document suivant'">
+          <ng-container *ngIf="isOnLastDocument">
+            <i class="fas fa-check-circle"></i>
+            Terminé
+          </ng-container>
+          <ng-container *ngIf="!isOnLastDocument">
+            Suivant
+            <i class="fas fa-chevron-right"></i>
+          </ng-container>
+        </button>
+      </div>
+
+      <!-- Sans formTitle : infos document + Terminé -->
+      <div class="document-info" *ngIf="!formTitle && pdfFile">
+        <button class="document-name-btn" (click)="openPdfInfoModal()">
+          <i class="fas fa-info-circle"></i>
+          {{ currentDocument.name }}
+        </button>
+        <span class="document-stats">
+        <i class="fas fa-layer-group"></i>
+          {{ currentDocument.fields.length }} éléments
+      </span>
+      </div>
+      <div class="header-right" *ngIf="!formTitle">
+        <button class="btn-upload" (click)="onTermine()">
           <i class="fas fa-check-circle"></i>
           Terminé
         </button>
       </div>
     </div>
 
-    <!-- Onglets multi-PDF (Secure-Link) : libellé uniquement -->
+    <!-- LIGNE 2 : Onglets multi-PDF -->
     <div class="pdf-doc-tabs" *ngIf="pdfDocs.length > 1">
       <button
         class="pdf-doc-tab"
@@ -62,21 +65,35 @@
         (click)="switchToPdfDoc(i)"
         [class.active]="i === activePdfDocIndex"
         type="button"
-        [title]="d.label"
-      >
+        [title]="d.label">
         {{ d.label }}
       </button>
     </div>
 
-    <!-- Barre d'outils principale -->
-    <app-pdf-toolbar [canUndo]="canUndo" [canRedo]="canRedo" [totalPages]="totalPages"
-      [currentPage]="currentDocument.currentPage" [showTextProperties]="activeTool === 'text'"
-      [textProperties]="textProperties" [drawingOptions]="drawingOptions" [activeTool]="activeTool"
-      (toolSelected)="onToolSelected($event)" (undo)="onUndo()" (redo)="onRedo()"
-      (export)="onExport(false)" (preview)="onPreview()" (save)="onSave()" (load)="onLoad()" (clear)="onClear()"
-      (pageChange)="onPageChange($event)" (textPropertiesChange)="onTextPropertiesChange($event)"
-      (drawingOptionsChange)="onDrawingOptionsChange($any($event))" (toggleProperties)="showProperties = !showProperties">
+    <!-- LIGNE 3 : Toolbar -->
+    <app-pdf-toolbar
+      [canUndo]="canUndo"
+      [canRedo]="canRedo"
+      [totalPages]="totalPages"
+      [currentPage]="currentDocument.currentPage"
+      [showTextProperties]="activeTool === 'text'"
+      [textProperties]="textProperties"
+      [drawingOptions]="drawingOptions"
+      [activeTool]="activeTool"
+      (toolSelected)="onToolSelected($event)"
+      (undo)="onUndo()"
+      (redo)="onRedo()"
+      (export)="onExport(false)"
+      (preview)="onPreview()"
+      (save)="onSave()"
+      (load)="onLoad()"
+      (clear)="onClear()"
+      (pageChange)="onPageChange($event)"
+      (textPropertiesChange)="onTextPropertiesChange($event)"
+      (drawingOptionsChange)="onDrawingOptionsChange($any($event))"
+      (toggleProperties)="showProperties = !showProperties">
     </app-pdf-toolbar>
+
   </header>
 
   <!-- Zone de contenu principale -->
