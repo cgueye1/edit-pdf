@@ -32,6 +32,11 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     @Input() currentPage = 1;
     @Input() fields: PDFField[] = [];
     @Input() scale = 1.5;
+    /**
+     * Force une rotation de rendu (degrés). Si null/undefined, on utilise la rotation du PDF.
+     * Utile pour corriger des PDFs qui s’affichent systématiquement à 180°.
+     */
+    @Input() forceRotation: number | null = null;
     @Input() activeTool: string | null = null;
     @Input() isDrawingMode = false;
     @Input() drawingTool: string | null = null;
@@ -151,7 +156,9 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             // (souvent quand le contenu a déjà été "applati" dans le bon sens).
             // On normalise ce cas pour éviter l'inversion systématique sur certains documents.
             const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
-            const rotation = pageRotation === 180 ? 0 : pageRotation;
+            const rotation = this.forceRotation != null
+              ? ((((this.forceRotation ?? 0) % 360) + 360) % 360)
+              : (pageRotation === 180 ? 0 : pageRotation);
             const viewport = page.getViewport({ scale: this.scale, rotation });
             const canvas = this.pdfCanvasRef?.nativeElement;
             if (!canvas) return;

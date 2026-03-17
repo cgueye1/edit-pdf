@@ -191,6 +191,7 @@
         </div>
         <div style="position: relative;">
           <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
+            [forceRotation]="activePdfDocIndex === 0 ? 0 : null"
             [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
             [drawingOptions]="drawingOptions"
             (pageClick)="onPageClick($event)"
