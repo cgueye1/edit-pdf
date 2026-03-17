@@ -104,6 +104,8 @@ export class AppComponent implements OnInit {
   uploadToken = '';
   /** Si true, un PDF est déjà attaché à la demande → on utilise PUT pour la prochaine sauvegarde (retour dans l'éditeur). */
   requestHasExistingPdf = false;
+  /** Etats d'édition déjà sauvegardés (par label) */
+  private editorStateByLabel: Record<string, any> = {};
   private pdfDocSessions = new Map<
     string,
     {
@@ -474,6 +476,18 @@ export class AppComponent implements OnInit {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+      // Restaurer les champs si on a un editorState sauvegardé côté backend
+      try {
+        const savedState = this.editorStateByLabel[String(target.label || '').trim()];
+        const fields = savedState?.fields;
+        const currentPage = savedState?.currentPage;
+        if (Array.isArray(fields)) {
+          this.currentDocument.fields = fields;
+        }
+        if (typeof currentPage === 'number' && currentPage >= 1) {
+          this.currentDocument.currentPage = currentPage;
+        }
+      } catch (_) {}
       this.updateHistoryButtons();
       this.loadPdfFromUrl(target.url);
     }
@@ -1069,7 +1083,7 @@ export class AppComponent implements OnInit {
       const file = new File([blob], filename, { type: 'application/pdf' });
       return new Promise((resolve, reject) => {
         this.docsService
-          .uploadFilledPdfForRequest(this.requestId, file, false, this.uploadToken, label)
+          .uploadFilledPdfForRequest(this.requestId, file, false, this.uploadToken, label, { fields: document.fields, currentPage: document.currentPage })
           .subscribe({ next: () => resolve(), error: reject });
       });
     };
@@ -1093,7 +1107,15 @@ export class AppComponent implements OnInit {
   private checkRequestHasExistingPdf(): void {
     if (!this.requestId) return;
     this.docsService.getRequestDetail(this.requestId).subscribe({
-      next: (r) => { this.requestHasExistingPdf = !!(r && r.submittedForm); },
+      next: (r) => {
+        this.requestHasExistingPdf = !!(r && (r.submittedForm || (r.submittedForms && r.submittedForms.length)));
+        const map: Record<string, any> = {};
+        (r?.submittedForms || []).forEach((f: any) => {
+          const label = String(f?.label || '').trim();
+          if (label) map[label] = f?.editorState;
+        });
+        this.editorStateByLabel = map;
+      },
       error: () => {},
     });
   }
@@ -1115,7 +1137,12 @@ export class AppComponent implements OnInit {
       .then((blob) => {
         const file = new File([blob], filename, { type: 'application/pdf' });
         const usePut = !label && this.requestHasExistingPdf;
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file, usePut, this.uploadToken, label).subscribe({
+        this.docsService
+          .uploadFilledPdfForRequest(this.requestId, file, usePut, this.uploadToken, label, {
+            fields: this.currentDocument.fields,
+            currentPage: this.currentDocument.currentPage,
+          })
+          .subscribe({
           next: () => {
             this.requestHasExistingPdf = true;
             if (!silent) this.notificationService.success(thenClose ? 'PDF enregistré.' : 'Document enregistré.');

@@ -13,10 +13,16 @@ export class DocsService {
   constructor(private http: HttpClient) {}
 
   /** Récupère le détail d'une demande (pour savoir si un PDF est déjà attaché → utiliser PUT au prochain upload). */
-  getRequestDetail(requestId: string): Observable<{ submittedForm?: { pdfUrl?: string } }> {
+  getRequestDetail(requestId: string): Observable<{
+    submittedForm?: { pdfUrl?: string };
+    submittedForms?: Array<{ label: string; pdfUrl?: string; editorState?: unknown }>;
+  }> {
     return this.http.get(`${this.secureLinkApi}/requests/${requestId}`, {
       withCredentials: true,
-    }) as Observable<{ submittedForm?: { pdfUrl?: string } }>;
+    }) as Observable<{
+      submittedForm?: { pdfUrl?: string };
+      submittedForms?: Array<{ label: string; pdfUrl?: string; editorState?: unknown }>;
+    }>;
   }
 
   /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour). label = nom du document (multi-PDF). */
@@ -26,11 +32,17 @@ export class DocsService {
     usePut: boolean = false,
     uploadToken?: string,
     label?: string,
+    editorState?: unknown,
   ): Observable<unknown> {
     const formData = new FormData();
     formData.append('file', file);
     if (label != null && label.trim() !== '') {
       formData.append('label', label.trim());
+    }
+    if (editorState != null) {
+      try {
+        formData.append('editorState', JSON.stringify(editorState));
+      } catch (_) {}
     }
     const url = `${this.secureLinkApi}/requests/${requestId}/upload-filled-pdf`;
     const headers: Record<string, string> = {};
