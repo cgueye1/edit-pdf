@@ -234,6 +234,8 @@ export class AppComponent implements OnInit {
 
         const ctx = canvasEl.getContext('2d');
         if (!ctx) continue;
+        // Reset any previous transform before rendering a new thumbnail.
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         await page.render({ canvasContext: ctx, viewport }).promise;
       }

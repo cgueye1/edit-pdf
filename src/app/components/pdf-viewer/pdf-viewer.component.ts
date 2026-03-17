@@ -160,6 +160,9 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
 
             canvas.width = viewport.width;
             canvas.height = viewport.height;
+            // Important: reset any previous canvas transforms.
+            // If a previous render left a transform matrix, PDF.js can appear mirrored/inverted.
+            context.setTransform(1, 0, 0, 1, 0, 0);
             context.clearRect(0, 0, canvas.width, canvas.height);
             await page.render({ canvasContext: context, viewport }).promise;
 
