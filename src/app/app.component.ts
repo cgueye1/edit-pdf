@@ -100,6 +100,8 @@ export class AppComponent implements OnInit {
   returnUrl = '';
   /** ID de la demande Secure Link : si présent, on envoie le PDF rempli à l'API au clic sur Terminé. */
   requestId = '';
+  /** Si true, un PDF est déjà attaché à la demande → on utilise PUT pour la prochaine sauvegarde (retour dans l'éditeur). */
+  requestHasExistingPdf = false;
   private pdfDocSessions = new Map<
     string,
     {
@@ -326,6 +328,7 @@ export class AppComponent implements OnInit {
         this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
+        this.checkRequestHasExistingPdf();
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
           this.switchToPdfDoc(0);
@@ -338,6 +341,7 @@ export class AppComponent implements OnInit {
         this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
+        this.checkRequestHasExistingPdf();
         try {
           const decoded = decodeURIComponent(directUrl);
           if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
@@ -1007,15 +1011,25 @@ export class AppComponent implements OnInit {
     }
   }
 
-  /** Enregistre le document courant côté serveur (sans redirection). Appelé au clic sur Suivant. */
+  /** Vérifie si la demande a déjà un PDF attaché → on utilisera PUT au prochain upload (retour éditeur). */
+  private checkRequestHasExistingPdf(): void {
+    if (!this.requestId) return;
+    this.docsService.getRequestDetail(this.requestId).subscribe({
+      next: (r) => { this.requestHasExistingPdf = !!(r && r.submittedForm); },
+      error: () => {},
+    });
+  }
+
+  /** Enregistre le document courant côté serveur (sans redirection). Appelé au clic sur Suivant. Toujours enregistré, même non rempli. */
   private uploadCurrentDocToRequest(silent: boolean): void {
     const filename = `${this.currentDocument.name || 'document'}.pdf`;
     this.pdfService
       .exportPdf(this.currentDocument.fields, filename, false, false)
       .then((blob) => {
         const file = new File([blob], filename, { type: 'application/pdf' });
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file).subscribe({
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file, this.requestHasExistingPdf).subscribe({
           next: () => {
+            this.requestHasExistingPdf = true;
             if (!silent) this.notificationService.success('Document enregistré.');
           },
           error: (err) => {
@@ -1030,7 +1044,7 @@ export class AppComponent implements OnInit {
       });
   }
 
-  /** Exporte le document courant, l'envoie à Secure Link (requestId), puis redirige. */
+  /** Exporte le document courant, l'envoie à Secure Link (requestId), puis redirige. Toujours enregistré (même non rempli). Premier envoi = POST, retour = PUT. */
   private uploadFilledPdfAndClose(): void {
     if (!this.requestId) {
       this.notifyParentClose();
@@ -1041,16 +1055,16 @@ export class AppComponent implements OnInit {
       .exportPdf(this.currentDocument.fields, filename, false, false)
       .then((blob) => {
         const file = new File([blob], filename, { type: 'application/pdf' });
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file).subscribe({
+        const usePut = this.requestHasExistingPdf;
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file, usePut).subscribe({
           next: () => {
+            this.requestHasExistingPdf = true;
             this.notificationService.success('PDF enregistré.');
             this.notifyParentClose();
           },
           error: (err) => {
             console.error(err);
             this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
-            // Même en cas d'erreur (ex: 401 non authentifié), on ferme l'éditeur
-            // pour revenir au wizard Secure Link qui pourra gérer l'état.
             this.notifyParentClose();
           },
         });

@@ -12,13 +12,22 @@ export class DocsService {
 
   constructor(private http: HttpClient) {}
 
-  /** Envoie le PDF rempli/modifié à la demande Secure Link pour que l'organisation puisse le consulter. */
-  uploadFilledPdfForRequest(requestId: string, file: File): Observable<unknown> {
+  /** Récupère le détail d'une demande (pour savoir si un PDF est déjà attaché → utiliser PUT au prochain upload). */
+  getRequestDetail(requestId: string): Observable<{ submittedForm?: { pdfUrl?: string } }> {
+    return this.http.get(`${this.secureLinkApi}/requests/${requestId}`, {
+      withCredentials: true,
+    }) as Observable<{ submittedForm?: { pdfUrl?: string } }>;
+  }
+
+  /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour après retour dans l'éditeur). */
+  uploadFilledPdfForRequest(requestId: string, file: File, usePut: boolean = false): Observable<unknown> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post(`${this.secureLinkApi}/requests/${requestId}/upload-filled-pdf`, formData, {
-      withCredentials: true,
-    }) as Observable<unknown>;
+    const url = `${this.secureLinkApi}/requests/${requestId}/upload-filled-pdf`;
+    const request = usePut
+      ? this.http.put(url, formData, { withCredentials: true })
+      : this.http.post(url, formData, { withCredentials: true });
+    return request as Observable<unknown>;
   }
 
   // upload simple PDF signé
