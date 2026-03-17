@@ -147,7 +147,12 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         try {
             this.isRendering = true;
             const page = await this.pdfDocument.getPage(this.currentPage);
-            const viewport = page.getViewport({ scale: this.scale });
+            // Certains PDFs arrivent avec un /Rotate=180 qui provoque un rendu "à l’envers"
+            // (souvent quand le contenu a déjà été "applati" dans le bon sens).
+            // On normalise ce cas pour éviter l'inversion systématique sur certains documents.
+            const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
+            const rotation = pageRotation === 180 ? 0 : pageRotation;
+            const viewport = page.getViewport({ scale: this.scale, rotation });
             const canvas = this.pdfCanvasRef?.nativeElement;
             if (!canvas) return;
             const context = canvas.getContext('2d');
