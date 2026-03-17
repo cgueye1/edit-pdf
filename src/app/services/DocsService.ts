@@ -20,13 +20,23 @@ export class DocsService {
   }
 
   /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour après retour dans l'éditeur). */
-  uploadFilledPdfForRequest(requestId: string, file: File, usePut: boolean = false): Observable<unknown> {
+  uploadFilledPdfForRequest(
+    requestId: string,
+    file: File,
+    usePut: boolean = false,
+    uploadToken?: string,
+  ): Observable<unknown> {
     const formData = new FormData();
     formData.append('file', file);
     const url = `${this.secureLinkApi}/requests/${requestId}/upload-filled-pdf`;
+    const headers: Record<string, string> = {};
+    if (uploadToken) {
+      headers['X-Upload-Token'] = uploadToken;
+    }
+    const options = { withCredentials: true as const, headers };
     const request = usePut
-      ? this.http.put(url, formData, { withCredentials: true })
-      : this.http.post(url, formData, { withCredentials: true });
+      ? this.http.put(url, formData, options)
+      : this.http.post(url, formData, options);
     return request as Observable<unknown>;
   }
 

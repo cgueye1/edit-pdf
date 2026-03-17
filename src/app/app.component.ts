@@ -100,6 +100,8 @@ export class AppComponent implements OnInit {
   returnUrl = '';
   /** ID de la demande Secure Link : si présent, on envoie le PDF rempli à l'API au clic sur Terminé. */
   requestId = '';
+  /** Token court terme pour l'upload cross-origin (passé par le front Secure-Link dans l'URL). */
+  uploadToken = '';
   /** Si true, un PDF est déjà attaché à la demande → on utilise PUT pour la prochaine sauvegarde (retour dans l'éditeur). */
   requestHasExistingPdf = false;
   private pdfDocSessions = new Map<
@@ -328,6 +330,7 @@ export class AppComponent implements OnInit {
         this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
+        this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
         this.checkRequestHasExistingPdf();
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
@@ -341,6 +344,7 @@ export class AppComponent implements OnInit {
         this.formSubtitle = p('subtitle') ? decodeURIComponent(String(p('subtitle'))) : '';
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
+        this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
         this.checkRequestHasExistingPdf();
         try {
           const decoded = decodeURIComponent(directUrl);
@@ -1004,7 +1008,7 @@ export class AppComponent implements OnInit {
   onConfirmTermineConfirmer(): void {
     this.showConfirmTermineModal = false;
     if (this.requestId && this.pdfUrl) {
-      this.uploadFilledPdfAndClose();
+      this.uploadCurrentDocToRequest(false, true);
     } else {
       this.notificationService.success('Formulaire terminé.');
       this.notifyParentClose();
@@ -1020,34 +1024,15 @@ export class AppComponent implements OnInit {
     });
   }
 
-  /** Enregistre le document courant côté serveur (sans redirection). Appelé au clic sur Suivant. Toujours enregistré, même non rempli. */
-  private uploadCurrentDocToRequest(silent: boolean): void {
-    const filename = `${this.currentDocument.name || 'document'}.pdf`;
-    this.pdfService
-      .exportPdf(this.currentDocument.fields, filename, false, false)
-      .then((blob) => {
-        const file = new File([blob], filename, { type: 'application/pdf' });
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file, this.requestHasExistingPdf).subscribe({
-          next: () => {
-            this.requestHasExistingPdf = true;
-            if (!silent) this.notificationService.success('Document enregistré.');
-          },
-          error: (err) => {
-            console.error(err);
-            if (!silent) this.notificationService.error('Erreur lors de l\'enregistrement.');
-          },
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-        if (!silent) this.notificationService.error('Erreur lors de l\'enregistrement.');
-      });
-  }
-
-  /** Exporte le document courant, l'envoie à Secure Link (requestId), puis redirige. Toujours enregistré (même non rempli). Premier envoi = POST, retour = PUT. */
-  private uploadFilledPdfAndClose(): void {
+  /**
+   * Enregistre le document courant via POST/PUT /api/requests/{id}/upload-filled-pdf.
+   * Utilisé au clic sur Suivant et sur Terminer (Confirmer) — un seul endpoint, pas d'upload spécial à la sortie.
+   * @param silent pas de toast succès
+   * @param thenClose si true, appelle notifyParentClose() après succès (pour Terminer)
+   */
+  private uploadCurrentDocToRequest(silent: boolean, thenClose: boolean = false): void {
     if (!this.requestId) {
-      this.notifyParentClose();
+      if (thenClose) this.notifyParentClose();
       return;
     }
     const filename = `${this.currentDocument.name || 'document'}.pdf`;
@@ -1055,25 +1040,23 @@ export class AppComponent implements OnInit {
       .exportPdf(this.currentDocument.fields, filename, false, false)
       .then((blob) => {
         const file = new File([blob], filename, { type: 'application/pdf' });
-        const usePut = this.requestHasExistingPdf;
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file, usePut).subscribe({
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file, this.requestHasExistingPdf, this.uploadToken).subscribe({
           next: () => {
             this.requestHasExistingPdf = true;
-            this.notificationService.success('PDF enregistré.');
-            this.notifyParentClose();
+            if (!silent) this.notificationService.success(thenClose ? 'PDF enregistré.' : 'Document enregistré.');
+            if (thenClose) this.notifyParentClose();
           },
           error: (err) => {
             console.error(err);
-            this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
-            this.notifyParentClose();
+            if (!silent) this.notificationService.error(thenClose ? 'Erreur lors de l\'enregistrement du PDF.' : 'Erreur lors de l\'enregistrement.');
+            if (thenClose) this.notifyParentClose();
           },
         });
       })
       .catch((err) => {
         console.error(err);
-        this.notificationService.error('Erreur lors de l\'enregistrement du PDF.');
-        // Si l'export échoue, on ferme tout de même l'éditeur pour ne pas bloquer l'utilisateur.
-        this.notifyParentClose();
+        if (!silent) this.notificationService.error(thenClose ? 'Erreur lors de l\'enregistrement du PDF.' : 'Erreur lors de l\'enregistrement.');
+        if (thenClose) this.notifyParentClose();
       });
   }
 
