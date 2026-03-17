@@ -19,15 +19,19 @@ export class DocsService {
     }) as Observable<{ submittedForm?: { pdfUrl?: string } }>;
   }
 
-  /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour après retour dans l'éditeur). */
+  /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour). label = nom du document (multi-PDF). */
   uploadFilledPdfForRequest(
     requestId: string,
     file: File,
     usePut: boolean = false,
     uploadToken?: string,
+    label?: string,
   ): Observable<unknown> {
     const formData = new FormData();
     formData.append('file', file);
+    if (label != null && label.trim() !== '') {
+      formData.append('label', label.trim());
+    }
     const url = `${this.secureLinkApi}/requests/${requestId}/upload-filled-pdf`;
     const headers: Record<string, string> = {};
     if (uploadToken) {

@@ -400,7 +400,8 @@ export class AppComponent implements OnInit {
       return;
     }
     if (this.requestId && this.pdfUrl) {
-      this.uploadCurrentDocToRequest(true);
+      const label = this.pdfDocs[this.activePdfDocIndex]?.label;
+      this.uploadCurrentDocToRequest(true, false, label);
     }
     this.switchToPdfDoc(this.activePdfDocIndex + 1);
   }
@@ -1007,12 +1008,79 @@ export class AppComponent implements OnInit {
 
   onConfirmTermineConfirmer(): void {
     this.showConfirmTermineModal = false;
-    if (this.requestId && this.pdfUrl) {
-      this.uploadCurrentDocToRequest(false, true);
+    if (this.requestId && this.pdfUrl && this.pdfDocs.length > 0) {
+      this.uploadAllDocsToRequestAndClose();
     } else {
       this.notificationService.success('Formulaire terminé.');
       this.notifyParentClose();
     }
+  }
+
+  /**
+   * Enregistre tous les PDF du formulaire avec leur nom (label), puis ferme.
+   * Sauvegarde la session courante, puis pour chaque onglet : charge le PDF, exporte, envoie avec label.
+   */
+  private uploadAllDocsToRequestAndClose(): void {
+    if (!this.requestId || !this.uploadToken) {
+      this.notificationService.error('Session invalide.');
+      this.notifyParentClose();
+      return;
+    }
+    // 1) Sauvegarder le document courant dans la session
+    const currentKey = String(this.activePdfDocIndex);
+    if (this.pdfUrl && currentKey) {
+      try {
+        this.pdfDocSessions.set(currentKey, {
+          document: { ...this.currentDocument },
+          history: this.historyService.getHistory(),
+          viewState: {
+            pdfUrl: this.pdfUrl,
+            pdfData: this.pdfData,
+            totalPages: this.totalPages,
+            pageDimensions: { ...this.pageDimensions },
+            scale: this.scale,
+          },
+        });
+      } catch (_) {}
+    }
+
+    const uploadOne = async (index: number): Promise<void> => {
+      const label = this.pdfDocs[index]?.label || `Document ${index + 1}`;
+      let document: PDFDocumentState | undefined;
+      let pdfData: ArrayBuffer | null = null;
+      if (index === this.activePdfDocIndex) {
+        document = this.currentDocument;
+        pdfData = this.pdfData;
+      } else {
+        const saved = this.pdfDocSessions.get(String(index));
+        document = saved?.document;
+        pdfData = saved?.viewState?.pdfData ?? null;
+      }
+      if (!document || !pdfData) return;
+      const filename = `${document.name || label}.pdf`;
+      await this.pdfService.loadPdf(pdfData);
+      const blob = await this.pdfService.exportPdf(document.fields, filename, false, false);
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      return new Promise((resolve, reject) => {
+        this.docsService
+          .uploadFilledPdfForRequest(this.requestId, file, false, this.uploadToken, label)
+          .subscribe({ next: () => resolve(), error: reject });
+      });
+    };
+
+    (async () => {
+      try {
+        for (let i = 0; i < this.pdfDocs.length; i++) {
+          await uploadOne(i);
+        }
+        this.requestHasExistingPdf = true;
+        this.notificationService.success('Tous les PDF ont été enregistrés.');
+      } catch (err) {
+        console.error(err);
+        this.notificationService.error('Erreur lors de l\'enregistrement des PDF.');
+      }
+      this.notifyParentClose();
+    })();
   }
 
   /** Vérifie si la demande a déjà un PDF attaché → on utilisera PUT au prochain upload (retour éditeur). */
@@ -1026,11 +1094,11 @@ export class AppComponent implements OnInit {
 
   /**
    * Enregistre le document courant via POST/PUT /api/requests/{id}/upload-filled-pdf.
-   * Utilisé au clic sur Suivant et sur Terminer (Confirmer) — un seul endpoint, pas d'upload spécial à la sortie.
    * @param silent pas de toast succès
-   * @param thenClose si true, appelle notifyParentClose() après succès (pour Terminer)
+   * @param thenClose si true, appelle notifyParentClose() après succès
+   * @param label nom du document (multi-PDF, ex. Contrat, Renseignements)
    */
-  private uploadCurrentDocToRequest(silent: boolean, thenClose: boolean = false): void {
+  private uploadCurrentDocToRequest(silent: boolean, thenClose: boolean = false, label?: string): void {
     if (!this.requestId) {
       if (thenClose) this.notifyParentClose();
       return;
@@ -1040,7 +1108,8 @@ export class AppComponent implements OnInit {
       .exportPdf(this.currentDocument.fields, filename, false, false)
       .then((blob) => {
         const file = new File([blob], filename, { type: 'application/pdf' });
-        this.docsService.uploadFilledPdfForRequest(this.requestId, file, this.requestHasExistingPdf, this.uploadToken).subscribe({
+        const usePut = !label && this.requestHasExistingPdf;
+        this.docsService.uploadFilledPdfForRequest(this.requestId, file, usePut, this.uploadToken, label).subscribe({
           next: () => {
             this.requestHasExistingPdf = true;
             if (!silent) this.notificationService.success(thenClose ? 'PDF enregistré.' : 'Document enregistré.');
