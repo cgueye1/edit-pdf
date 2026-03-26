@@ -21,7 +21,7 @@ import { DrawingCanvasComponent } from '../drawing-canvas/drawing-canvas.compone
     standalone: true,
     imports: [CommonModule, DraggableDirective, ResizableDirective, DrawingCanvasComponent],
     templateUrl: './pdf-viewer.component.html',
-    styleUrls: ['./pdf-viewer.component.scss'],
+    styleUrls: ['./pdf-viewer.component.css'],
 })
 export class PdfViewerComponent implements AfterViewInit, OnChanges {
     @ViewChild('pdfContainer', { static: true }) pdfContainerRef!: ElementRef<HTMLDivElement>;
@@ -58,6 +58,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     pageHeight = 0;
     selectedField: PDFField | null = null;
     isRendering = false;
+    private pendingRender = false;
     editingField: PDFField | null = null;
     isResizing = false;
     isDragging = false;
@@ -150,9 +151,16 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
 
     async renderPage(): Promise<void> {
-        if (!this.pdfDocument || this.isRendering) return;
+        if (!this.pdfDocument) return;
+        if (this.isRendering) {
+            // Une demande de rendu arrive pendant un rendu en cours:
+            // on programme un rerender juste après pour appliquer la dernière rotation/scale/page.
+            this.pendingRender = true;
+            return;
+        }
         try {
             this.isRendering = true;
+            this.pendingRender = false;
             const page = await this.pdfDocument.getPage(this.currentPage);
             const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
             const manualRotation = this.forceRotation != null
@@ -188,6 +196,10 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             // Erreur silencieuse
         } finally {
             this.isRendering = false;
+            if (this.pendingRender) {
+                this.pendingRender = false;
+                void this.renderPage();
+            }
         }
     }
 
