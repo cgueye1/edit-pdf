@@ -353,6 +353,13 @@ export class AppComponent implements OnInit {
     const winParams = this.getQueryParams();
     const applyParams = (routeParams: Record<string, string>) => {
       const p = (key: string) => routeParams[key] ?? winParams[key];
+      const parseRotationParam = (raw: string | undefined): number | null => {
+        if (!raw) return null;
+        const n = Number(decodeURIComponent(String(raw)));
+        if (!Number.isFinite(n)) return null;
+        const normalized = ((Math.round(n / 90) * 90) % 360 + 360) % 360;
+        return normalized;
+      };
       const docsParam = p('docs');
       const directUrl = p('url');
       const encryptedParam = p('pdfurl');
@@ -377,6 +384,10 @@ export class AppComponent implements OnInit {
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
+        const doc0Rotation = parseRotationParam(p('doc0Rotation'));
+        // Fallback pragmatic: dans le flux Secure-Link, le 1er document est souvent à l'envers.
+        // On applique 180° par défaut, surchargable via ?doc0Rotation=0|90|180|270.
+        this.manualRotationByDocKey['doc:0'] = doc0Rotation ?? 180;
         this.checkRequestHasExistingPdf();
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
@@ -391,6 +402,8 @@ export class AppComponent implements OnInit {
         this.returnUrl = p('returnUrl') ? decodeURIComponent(String(p('returnUrl'))) : '';
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
+        const standaloneRotation = parseRotationParam(p('doc0Rotation'));
+        this.manualRotationByDocKey['standalone'] = standaloneRotation ?? 180;
         this.checkRequestHasExistingPdf();
         try {
           const decoded = decodeURIComponent(directUrl);

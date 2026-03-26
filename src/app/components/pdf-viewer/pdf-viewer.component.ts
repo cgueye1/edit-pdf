@@ -109,7 +109,9 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
     }
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['pdfUrl'] && this.pdfUrl) this.loadPdf();
-        if ((changes['currentPage'] || changes['scale']) && this.pdfDocument) this.renderPage();
+        if ((changes['currentPage'] || changes['scale'] || changes['forceRotation']) && this.pdfDocument) {
+            this.renderPage();
+        }
 
         if (changes['activeTool']) {
             this.updateEraserListeners();
