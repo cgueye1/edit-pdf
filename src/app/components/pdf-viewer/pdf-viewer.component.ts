@@ -109,7 +109,9 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
         this.renderPage();
     }
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['pdfUrl'] && this.pdfUrl) this.loadPdf();
+        if (this.pdfUrl && (changes['pdfUrl'] || changes['pdfData'])) {
+            this.loadPdf();
+        }
         if ((changes['currentPage'] || changes['scale'] || changes['forceRotation']) && this.pdfDocument) {
             this.renderPage();
         }
@@ -135,18 +137,18 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
 
     async loadPdf(): Promise<void> {
         try {
-            // Chargement PDF
-            this.isRendering = true;
+            // Ne pas mettre isRendering=true ici : renderPage() utilise le même flag et
+            // sortirait tout de suite (pendingRender) sans jamais entrer dans le try/finally
+            // du rendu — le canvas peut rester vide ou afficher un ancien bitmap.
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
-            const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
+            const loadingTask =
+                this.pdfData && this.pdfData.byteLength > 0
+                    ? pdfjsLib.getDocument({ data: this.pdfData.slice(0) })
+                    : pdfjsLib.getDocument(this.pdfUrl);
             this.pdfDocument = await loadingTask.promise;
-            // PDF document chargé
             await this.renderPage();
-            // Page rendue
         } catch (error) {
             // Erreur silencieuse
-        } finally {
-            this.isRendering = false;
         }
     }
 
