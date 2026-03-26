@@ -173,6 +173,21 @@
             </button>
           </div>
           <div class="divider-vertical"></div>
+          <div class="zoom-controls">
+            <button class="control-btn" (click)="rotateCurrentDocLeft()" title="Tourner a gauche (90°)">
+              <i class="fas fa-undo-alt"></i>
+            </button>
+            <button class="control-btn" (click)="toggleCurrentDocFlip180()" title="Basculer 180°">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="control-btn" (click)="rotateCurrentDocRight()" title="Tourner a droite (90°)">
+              <i class="fas fa-redo-alt"></i>
+            </button>
+            <button class="fit-btn" (click)="resetCurrentDocRotation()">
+              <span>Reset rotation</span>
+            </button>
+          </div>
+          <div class="divider-vertical"></div>
           <button class="fit-btn" (click)="fitToScreen()">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
               <path fill="currentColor" d="M14.667 1.294H1.333C.598 1.294 0 1.977 0 2.816v10.956c0 .84.598 1.522 1.333 1.522h13.334c.735 0 1.333-.683 1.333-1.522V2.816c0-.84-.598-1.522-1.333-1.522m.267 12.478c0 .168-.12.304-.267.304H1.333c-.147 0-.266-.136-.266-.304V2.816c0-.168.119-.305.266-.305h13.334c.147 0 .267.137.267.305z"></path>
@@ -186,6 +201,7 @@
         </div>
         <div style="position: relative;">
           <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
+            [forceRotation]="currentViewerRotation"
             [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
             [drawingOptions]="drawingOptions"
             (pageClick)="onPageClick($event)"

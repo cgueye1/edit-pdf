@@ -93,6 +93,8 @@ export class AppComponent implements OnInit {
   /** Mode multi-PDF (Secure-Link): liste de documents à éditer dans des onglets. */
   pdfDocs: Array<{ label: string; url: string }> = [];
   activePdfDocIndex = 0;
+  /** Rotation manuelle par document (0/90/180/270). */
+  private manualRotationByDocKey: Record<string, number> = {};
   /** Contexte Secure-Link : titre (formulaire) et sous-titre (organisation). */
   formTitle = '';
   formSubtitle = '';
@@ -190,6 +192,42 @@ export class AppComponent implements OnInit {
     this.scale = Math.max(this.scale - 0.25, 0.5);
   }
 
+  get currentViewerRotation(): number {
+    return this.manualRotationByDocKey[this.activeDocRotationKey()] ?? 0;
+  }
+
+  rotateCurrentDocRight(): void {
+    const key = this.activeDocRotationKey();
+    const next = ((this.currentViewerRotation + 90) % 360 + 360) % 360;
+    this.manualRotationByDocKey[key] = next;
+    this.generateThumbnails();
+  }
+
+  rotateCurrentDocLeft(): void {
+    const key = this.activeDocRotationKey();
+    const next = ((this.currentViewerRotation - 90) % 360 + 360) % 360;
+    this.manualRotationByDocKey[key] = next;
+    this.generateThumbnails();
+  }
+
+  toggleCurrentDocFlip180(): void {
+    const key = this.activeDocRotationKey();
+    const next = this.currentViewerRotation === 180 ? 0 : 180;
+    this.manualRotationByDocKey[key] = next;
+    this.generateThumbnails();
+  }
+
+  resetCurrentDocRotation(): void {
+    const key = this.activeDocRotationKey();
+    this.manualRotationByDocKey[key] = 0;
+    this.generateThumbnails();
+  }
+
+  private activeDocRotationKey(): string {
+    if (this.pdfDocs.length > 0) return `doc:${this.activePdfDocIndex}`;
+    return 'standalone';
+  }
+
   /** Fit : premier clic = 150 %, reclic = 50 % (bascule). */
   private fitToggled = false;
 
@@ -229,7 +267,9 @@ export class AppComponent implements OnInit {
         const page = await pdf.getPage(i + 1);
         const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
         const rotation = pageRotation;
-        const viewport = page.getViewport({ scale: 0.36, rotation });
+        const manualRotation = this.manualRotationByDocKey[this.activeDocRotationKey()] ?? 0;
+        const finalRotation = ((rotation + manualRotation) % 360 + 360) % 360;
+        const viewport = page.getViewport({ scale: 0.36, rotation: finalRotation });
 
         canvasEl.width = viewport.width;
         canvasEl.height = viewport.height;

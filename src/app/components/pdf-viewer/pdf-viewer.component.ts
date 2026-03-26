@@ -153,9 +153,10 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges {
             this.isRendering = true;
             const page = await this.pdfDocument.getPage(this.currentPage);
             const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
-            const rotation = this.forceRotation != null
+            const manualRotation = this.forceRotation != null
               ? ((((this.forceRotation ?? 0) % 360) + 360) % 360)
-              : pageRotation;
+              : 0;
+            const rotation = (((pageRotation + manualRotation) % 360) + 360) % 360;
             const viewport = page.getViewport({ scale: this.scale, rotation });
             const canvas = this.pdfCanvasRef?.nativeElement;
             if (!canvas) return;
