@@ -228,7 +228,7 @@ export class AppComponent implements OnInit {
 
         const page = await pdf.getPage(i + 1);
         const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
-        const rotation = pageRotation === 180 ? 0 : pageRotation;
+        const rotation = pageRotation;
         const viewport = page.getViewport({ scale: 0.36, rotation });
 
         canvasEl.width = viewport.width;
@@ -569,7 +569,7 @@ export class AppComponent implements OnInit {
           this.totalPages = pdf.numPages;
           const page = await pdf.getPage(1);
           const pageRotation = (((page?.rotate ?? 0) % 360) + 360) % 360;
-          const rotation = pageRotation === 180 ? 0 : pageRotation;
+          const rotation = pageRotation;
           const viewport = page.getViewport({ scale: 1, rotation });
           this.pageDimensions = { width: viewport.width, height: viewport.height };
           pdf.destroy().catch(() => {});

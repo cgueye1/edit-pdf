@@ -2,28 +2,24 @@
   <!-- En-tête avec toolbar -->
   <header class="app-header-wrapper">
 
-    <!-- LIGNE 1 : Logo + Contexte + Bouton Suivant -->
+    <!-- LIGNE 1 : Logo -->
+    <div class="header-logo-wrap">
+      <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
+    </div>
+
+    <!-- LIGNE 2 : Retour + Titre/Sous-titre + Bouton Suivant -->
     <div class="app-header-top">
 
-      <!-- Logo -->
-      <div class="header-logo-wrap">
-        <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
-      </div>
-
-      <!-- Titre + sous-titre (centré) -->
-      <div class="pdf-context-titles" *ngIf="formTitle">
-        <div class="flex items-center gap-2">
-          <button type="button" class="pdf-context-back" (click)="notifyParentClose()" title="Retour">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <div>
-            <span class="pdf-context-title">{{ formTitle }}</span>
-            <span class="pdf-context-subtitle" *ngIf="formSubtitle">{{ formSubtitle }}</span>
-          </div>
+      <div *ngIf="formTitle" class="pdf-context-titles">
+        <button type="button" class="pdf-context-back" (click)="notifyParentClose()" title="Retour">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="pdf-context-text">
+          <span class="pdf-context-title">{{ formTitle }}</span>
+          <span class="pdf-context-subtitle" *ngIf="formSubtitle">{{ formSubtitle }}</span>
         </div>
       </div>
 
-      <!-- Bouton Suivant / Terminé -->
       <div class="header-right" *ngIf="formTitle">
         <button class="btn-suivant-terminer" (click)="onSuivantOrTermine()"
                 [title]="isOnLastDocument ? 'Terminer' : 'Document suivant'">
@@ -38,7 +34,6 @@
         </button>
       </div>
 
-      <!-- Sans formTitle : infos document + Terminé -->
       <div class="document-info" *ngIf="!formTitle && pdfFile">
         <button class="document-name-btn" (click)="openPdfInfoModal()">
           <i class="fas fa-info-circle"></i>
@@ -55,9 +50,10 @@
           Terminé
         </button>
       </div>
+
     </div>
 
-    <!-- LIGNE 2 : Onglets multi-PDF -->
+    <!-- LIGNE 3 : Onglets multi-PDF -->
     <div class="pdf-doc-tabs" *ngIf="pdfDocs.length > 1">
       <button
         class="pdf-doc-tab"
@@ -70,7 +66,7 @@
       </button>
     </div>
 
-    <!-- LIGNE 3 : Toolbar -->
+    <!-- LIGNE 4 : Toolbar -->
     <app-pdf-toolbar
       [canUndo]="canUndo"
       [canRedo]="canRedo"
@@ -95,7 +91,6 @@
     </app-pdf-toolbar>
 
   </header>
-
   <!-- Zone de contenu principale -->
   <main class="app-main">
     <div class="main-content-wrapper">
@@ -191,7 +186,6 @@
         </div>
         <div style="position: relative;">
           <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
-            [forceRotation]="activePdfDocIndex === 0 ? 0 : null"
             [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
             [drawingOptions]="drawingOptions"
             (pageClick)="onPageClick($event)"
