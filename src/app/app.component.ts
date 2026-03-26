@@ -385,9 +385,8 @@ export class AppComponent implements OnInit {
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
         const doc0Rotation = parseRotationParam(p('doc0Rotation'));
-        // Fallback pragmatic: dans le flux Secure-Link, le 1er document est souvent à l'envers.
-        // On applique 180° par défaut, surchargable via ?doc0Rotation=0|90|180|270.
-        this.manualRotationByDocKey['doc:0'] = doc0Rotation ?? 180;
+        // Par defaut, on n'applique aucune rotation automatique.
+        this.manualRotationByDocKey['doc:0'] = doc0Rotation ?? 0;
         this.checkRequestHasExistingPdf();
         if (this.pdfDocs.length > 0) {
           this.activePdfDocIndex = 0;
@@ -403,7 +402,7 @@ export class AppComponent implements OnInit {
         this.requestId = p('requestId') ? decodeURIComponent(String(p('requestId'))) : '';
         this.uploadToken = p('uploadToken') ? decodeURIComponent(String(p('uploadToken'))) : '';
         const standaloneRotation = parseRotationParam(p('doc0Rotation'));
-        this.manualRotationByDocKey['standalone'] = standaloneRotation ?? 180;
+        this.manualRotationByDocKey['standalone'] = standaloneRotation ?? 0;
         this.checkRequestHasExistingPdf();
         try {
           const decoded = decodeURIComponent(directUrl);
