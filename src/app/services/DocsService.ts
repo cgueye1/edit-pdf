@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment.prod';
 
 @Injectable({
@@ -70,20 +71,73 @@ export class DocsService {
     userId: number,
     file: File,
     signatureNotes: string = '',
+    /** UUID de la demande Secure Link (prioritaire sur documentId legacy). */
+    secureLinkRequestId?: string,
   ): Observable<any> {
     const formData = new FormData();
     formData.append('signedPdf', file);
 
     if ((environment as any).useSecureLink) {
-      // Secure Link : adapter l’endpoint selon votre API (ex. demande, document client)
-      formData.append('documentId', documentId.toString());
+      const rid = secureLinkRequestId?.trim();
+      if (rid) {
+        formData.append('requestId', rid);
+      } else {
+        formData.append('documentId', String(documentId));
+      }
       formData.append('signatureNotes', signatureNotes);
-      return this.http.post(`${this.secureLinkApi}/clients/documents/signed`, formData);
+      return this.http.post(`${this.secureLinkApi}/clients/documents/signed`, formData, {
+        withCredentials: true,
+      });
     }
 
     formData.append('documentId', documentId.toString());
     formData.append('userId', userId.toString());
     formData.append('signatureNotes', signatureNotes);
     return this.http.post(`${this.apiUrl}/signature/mark`, formData);
+  }
+
+  private pkiHttpOptions(uploadToken?: string) {
+    const headers: Record<string, string> = {};
+    if (uploadToken) {
+      headers['X-Upload-Token'] = uploadToken;
+    }
+    return { withCredentials: true as const, headers };
+  }
+
+  /**
+   * Après un upload réussi : certificat utilisateur + signature PAdES.
+   * Silencieux si PKI désactivée côté API (erreur absorbée).
+   * Utilise le même X-Upload-Token que l’upload (iframe sans cookie).
+   */
+  applyPkiAfterUpload(
+    requestId: string,
+    label: string | undefined,
+    uploadToken?: string,
+  ): Observable<{ ok: boolean; pki?: unknown; skipped?: boolean }> {
+    const env = environment as {
+      useSecureLink?: boolean;
+      pkiAfterUpload?: boolean;
+    };
+    if (!env.useSecureLink || env.pkiAfterUpload === false) {
+      return of({ ok: true, skipped: true });
+    }
+    const opts = this.pkiHttpOptions(uploadToken);
+    const ensureUrl = uploadToken
+      ? `${this.secureLinkApi}/pki/ensure-certificate?requestId=${encodeURIComponent(requestId)}`
+      : `${this.secureLinkApi}/pki/ensure-certificate`;
+    const body: { requestId: string; label?: string } = { requestId };
+    if (label != null && String(label).trim() !== '') {
+      body.label = String(label).trim();
+    }
+    return this.http.post(ensureUrl, {}, opts).pipe(
+      switchMap(() =>
+        this.http.post(`${this.secureLinkApi}/pki/sign`, body, opts),
+      ),
+      map((pki) => ({ ok: true, pki })),
+      catchError((err) => {
+        console.warn('[PKI]', err);
+        return of({ ok: false });
+      }),
+    );
   }
 }

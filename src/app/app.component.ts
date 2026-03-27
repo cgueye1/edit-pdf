@@ -33,6 +33,7 @@ import AES from 'crypto-js/aes';
 import enc from 'crypto-js/enc-utf8';
 import { DocsService } from './services/DocsService';
 import { environment } from '../environments/environment.prod';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -315,8 +316,18 @@ export class AppComponent implements OnInit {
   }
 
   sendSignedDocument(file: File) {
+    const secureLinkRequestId =
+      (environment as any).useSecureLink && this.requestId?.trim()
+        ? this.requestId.trim()
+        : undefined;
     this.docsService
-      .markSignature(this.recivedData.id, this.recivedData.signerId, file, '')
+      .markSignature(
+        this.recivedData.id,
+        this.recivedData.signerId,
+        file,
+        '',
+        secureLinkRequestId,
+      )
       .subscribe({
         next: (res) => {
           console.log('Document signé :', res);
@@ -1145,11 +1156,32 @@ export class AppComponent implements OnInit {
 
     (async () => {
       try {
+        let anyPkiOk = false;
         for (let i = 0; i < this.pdfDocs.length; i++) {
           await uploadOne(i);
+          const docLabel = this.pdfDocs[i]?.label || `Document ${i + 1}`;
+          const pr = await firstValueFrom(
+            this.docsService.applyPkiAfterUpload(
+              this.requestId!,
+              docLabel,
+              this.uploadToken,
+            ),
+          );
+          if (
+            pr.ok &&
+            pr.pki &&
+            !pr.skipped &&
+            (pr.pki as { status?: string }).status === 'SUCCESS'
+          ) {
+            anyPkiOk = true;
+          }
         }
         this.requestHasExistingPdf = true;
-        this.notificationService.success('Tous les PDF ont été enregistrés.');
+        this.notificationService.success(
+          anyPkiOk
+            ? 'Tous les PDF ont été enregistrés (signature numérique appliquée).'
+            : 'Tous les PDF ont été enregistrés.',
+        );
       } catch (err) {
         console.error(err);
         this.notificationService.error('Erreur lors de l\'enregistrement des PDF.');
@@ -1200,8 +1232,28 @@ export class AppComponent implements OnInit {
           .subscribe({
           next: () => {
             this.requestHasExistingPdf = true;
-            if (!silent) this.notificationService.success(thenClose ? 'PDF enregistré.' : 'Document enregistré.');
-            if (thenClose) this.notifyParentClose();
+            if (!silent) {
+              this.notificationService.success(
+                thenClose ? 'PDF enregistré.' : 'Document enregistré.',
+              );
+            }
+            this.docsService
+              .applyPkiAfterUpload(this.requestId!, label, this.uploadToken)
+              .subscribe({
+                next: (pr) => {
+                  if (
+                    pr.ok &&
+                    pr.pki &&
+                    !pr.skipped &&
+                    (pr.pki as { status?: string }).status === 'SUCCESS'
+                  ) {
+                    this.notificationService.success('Signature numérique appliquée.');
+                  }
+                },
+                complete: () => {
+                  if (thenClose) this.notifyParentClose();
+                },
+              });
           },
           error: (err) => {
             console.error(err);
