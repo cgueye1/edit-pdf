@@ -33,7 +33,6 @@ import AES from 'crypto-js/aes';
 import enc from 'crypto-js/enc-utf8';
 import { DocsService } from './services/DocsService';
 import { environment } from '../environments/environment.prod';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -1156,31 +1155,12 @@ export class AppComponent implements OnInit {
 
     (async () => {
       try {
-        let anyPkiOk = false;
         for (let i = 0; i < this.pdfDocs.length; i++) {
           await uploadOne(i);
-          const docLabel = this.pdfDocs[i]?.label || `Document ${i + 1}`;
-          const pr = await firstValueFrom(
-            this.docsService.applyPkiAfterUpload(
-              this.requestId!,
-              docLabel,
-              this.uploadToken,
-            ),
-          );
-          if (
-            pr.ok &&
-            pr.pki &&
-            !pr.skipped &&
-            (pr.pki as { status?: string }).status === 'SUCCESS'
-          ) {
-            anyPkiOk = true;
-          }
         }
         this.requestHasExistingPdf = true;
         this.notificationService.success(
-          anyPkiOk
-            ? 'Tous les PDF ont été enregistrés (signature numérique appliquée).'
-            : 'Tous les PDF ont été enregistrés.',
+          'Tous les PDF ont été enregistrés.',
         );
       } catch (err) {
         console.error(err);
@@ -1237,23 +1217,7 @@ export class AppComponent implements OnInit {
                 thenClose ? 'PDF enregistré.' : 'Document enregistré.',
               );
             }
-            this.docsService
-              .applyPkiAfterUpload(this.requestId!, label, this.uploadToken)
-              .subscribe({
-                next: (pr) => {
-                  if (
-                    pr.ok &&
-                    pr.pki &&
-                    !pr.skipped &&
-                    (pr.pki as { status?: string }).status === 'SUCCESS'
-                  ) {
-                    this.notificationService.success('Signature numérique appliquée.');
-                  }
-                },
-                complete: () => {
-                  if (thenClose) this.notifyParentClose();
-                },
-              });
+            if (thenClose) this.notifyParentClose();
           },
           error: (err) => {
             console.error(err);
@@ -1279,10 +1243,9 @@ export class AppComponent implements OnInit {
         );
         return;
       }
-      // Règle demandée:
-      // - si un PDF existait déjà avant l'ouverture => retour vers returnUrl
-      // - sinon => retour à la page précédente
-      if (this.hadExistingPdfOnOpen && this.returnUrl && this.returnUrl.trim()) {
+      // Flux Secure Link : returnUrl pointe vers le récap client (ex. /client/demandes#fromPdfEditor).
+      // Il doit s'appliquer aussi au 1er remplissage (hadPdfAtOpen=0), sinon history.back() ne ramène pas au wizard.
+      if (this.returnUrl && this.returnUrl.trim()) {
         window.location.href = this.returnUrl;
         return;
       }

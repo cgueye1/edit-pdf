@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment.prod';
 
 @Injectable({
@@ -26,7 +25,7 @@ export class DocsService {
     }>;
   }
 
-  /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour). label = nom du document (multi-PDF). */
+  /** Envoie le PDF rempli (POST = premier envoi, PUT = mise à jour). label = nom du document (multi-PDF). La PKI est appliquée côté API dans uploadFilledPdf (un seul envoi MinIO). */
   uploadFilledPdfForRequest(
     requestId: string,
     file: File,
@@ -94,50 +93,5 @@ export class DocsService {
     formData.append('userId', userId.toString());
     formData.append('signatureNotes', signatureNotes);
     return this.http.post(`${this.apiUrl}/signature/mark`, formData);
-  }
-
-  private pkiHttpOptions(uploadToken?: string) {
-    const headers: Record<string, string> = {};
-    if (uploadToken) {
-      headers['X-Upload-Token'] = uploadToken;
-    }
-    return { withCredentials: true as const, headers };
-  }
-
-  /**
-   * Après un upload réussi : certificat utilisateur + signature PAdES.
-   * Silencieux si PKI désactivée côté API (erreur absorbée).
-   * Utilise le même X-Upload-Token que l’upload (iframe sans cookie).
-   */
-  applyPkiAfterUpload(
-    requestId: string,
-    label: string | undefined,
-    uploadToken?: string,
-  ): Observable<{ ok: boolean; pki?: unknown; skipped?: boolean }> {
-    const env = environment as {
-      useSecureLink?: boolean;
-      pkiAfterUpload?: boolean;
-    };
-    if (!env.useSecureLink || env.pkiAfterUpload === false) {
-      return of({ ok: true, skipped: true });
-    }
-    const opts = this.pkiHttpOptions(uploadToken);
-    const ensureUrl = uploadToken
-      ? `${this.secureLinkApi}/pki/ensure-certificate?requestId=${encodeURIComponent(requestId)}`
-      : `${this.secureLinkApi}/pki/ensure-certificate`;
-    const body: { requestId: string; label?: string } = { requestId };
-    if (label != null && String(label).trim() !== '') {
-      body.label = String(label).trim();
-    }
-    return this.http.post(ensureUrl, {}, opts).pipe(
-      switchMap(() =>
-        this.http.post(`${this.secureLinkApi}/pki/sign`, body, opts),
-      ),
-      map((pki) => ({ ok: true, pki })),
-      catchError((err) => {
-        console.warn('[PKI]', err);
-        return of({ ok: false });
-      }),
-    );
   }
 }
