@@ -106,6 +106,8 @@ export class AppComponent implements OnInit {
   uploadToken = '';
   /** Si true, un PDF est déjà attaché à la demande → on utilise PUT pour la prochaine sauvegarde (retour dans l'éditeur). */
   requestHasExistingPdf = false;
+  /** Etat à l'ouverture de l'éditeur: la demande avait déjà un PDF avant d'entrer ici. */
+  hadExistingPdfOnOpen = false;
   /** Etats d'édition déjà sauvegardés (par label) */
   private editorStateByLabel: Record<string, any> = {};
   private pdfDocSessions = new Map<
@@ -363,6 +365,7 @@ export class AppComponent implements OnInit {
       const docsParam = p('docs');
       const directUrl = p('url');
       const encryptedParam = p('pdfurl');
+      this.hadExistingPdfOnOpen = p('hadPdfAtOpen') === '1';
 
       if (docsParam) {
         // ── Mode Secure Link (multi-PDF): liste de docs [{label,url}] ─────────
@@ -1218,10 +1221,16 @@ export class AppComponent implements OnInit {
   notifyParentClose(): void {
     try {
       if (typeof window !== 'undefined' && window.parent !== window) {
-        window.parent.postMessage({ type: 'secure-link-close-pdf-editor' }, '*');
+        window.parent.postMessage(
+          { type: 'secure-link-close-pdf-editor', hasExistingPdf: this.hadExistingPdfOnOpen },
+          '*',
+        );
         return;
       }
-      if (this.returnUrl) {
+      // Règle demandée:
+      // - si un PDF existait déjà avant l'ouverture => retour vers returnUrl
+      // - sinon => retour à la page précédente
+      if (this.hadExistingPdfOnOpen && this.returnUrl && this.returnUrl.trim()) {
         window.location.href = this.returnUrl;
         return;
       }
