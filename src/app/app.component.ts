@@ -296,7 +296,11 @@ export class AppComponent implements OnInit {
 
   async loadPdfFromUrl(url: string) {
     try {
-      const response = await fetch(url);
+      const headers: Record<string, string> = {};
+      if (this.uploadToken && url.includes('/filled-pdf')) {
+        headers['X-Upload-Token'] = this.uploadToken;
+      }
+      const response = await fetch(url, { credentials: 'include', headers });
       if (!response.ok) throw new Error('HTTP error ' + response.status);
       const blob = await response.blob();
       this.pdfFile = new File([blob], 'document.pdf', { type: 'application/pdf' });
@@ -472,7 +476,7 @@ export class AppComponent implements OnInit {
     }
     if (this.requestId && this.pdfUrl) {
       const label = this.pdfDocs[this.activePdfDocIndex]?.label;
-      this.uploadCurrentDocToRequest(true, false, label);
+      // this.uploadCurrentDocToRequest(true, false, label);
     }
     this.switchToPdfDoc(this.activePdfDocIndex + 1);
   }
