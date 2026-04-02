@@ -297,10 +297,11 @@ export class AppComponent implements OnInit {
   async loadPdfFromUrl(url: string) {
     try {
       const headers: Record<string, string> = {};
-      if (this.uploadToken && url.includes('/filled-pdf')) {
-        headers['X-Upload-Token'] = this.uploadToken;
+      const token = this.uploadToken?.trim();
+      if (token && url.includes('/storage/files/')) {
+        headers['X-Upload-Token'] = token;
       }
-      const response = await fetch(url, { credentials: 'include', headers });
+      const response = await fetch(url, { headers });
       if (!response.ok) throw new Error('HTTP error ' + response.status);
       const blob = await response.blob();
       this.pdfFile = new File([blob], 'document.pdf', { type: 'application/pdf' });
