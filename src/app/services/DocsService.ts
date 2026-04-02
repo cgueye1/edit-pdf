@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment.prod';
 
@@ -13,12 +13,21 @@ export class DocsService {
   constructor(private http: HttpClient) {}
 
   /** Récupère le détail d'une demande (pour savoir si un PDF est déjà attaché → utiliser PUT au prochain upload). */
-  getRequestDetail(requestId: string): Observable<{
+  getRequestDetail(
+    requestId: string,
+    uploadToken?: string,
+  ): Observable<{
     submittedForm?: { pdfUrl?: string };
     submittedForms?: Array<{ label: string; pdfUrl?: string; editorState?: unknown }>;
   }> {
+    const t = uploadToken?.trim();
+    let headers = new HttpHeaders();
+    if (t) {
+      headers = headers.set('X-Upload-Token', t);
+    }
     return this.http.get(`${this.secureLinkApi}/requests/${requestId}`, {
       withCredentials: true,
+      headers,
     }) as Observable<{
       submittedForm?: { pdfUrl?: string };
       submittedForms?: Array<{ label: string; pdfUrl?: string; editorState?: unknown }>;

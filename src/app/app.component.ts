@@ -1178,7 +1178,7 @@ export class AppComponent implements OnInit {
   /** Vérifie si la demande a déjà un PDF attaché → on utilisera PUT au prochain upload (retour éditeur). */
   private checkRequestHasExistingPdf(): void {
     if (!this.requestId) return;
-    this.docsService.getRequestDetail(this.requestId).subscribe({
+    this.docsService.getRequestDetail(this.requestId, this.uploadToken).subscribe({
       next: (r) => {
         this.requestHasExistingPdf = !!(r && (r.submittedForm || (r.submittedForms && r.submittedForms.length)));
         const map: Record<string, any> = {};
