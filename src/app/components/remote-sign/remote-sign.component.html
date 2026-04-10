@@ -6,6 +6,11 @@
     </div>
   </div>
 
+  <p class="upload-hint" *ngIf="!error">
+    Votre tracé est envoyé à l’ordinateur qui affiche le formulaire. Pour <strong>enregistrer le PDF</strong> sur votre
+    demande (upload côté serveur), utilisez le bouton <strong>Terminer</strong> sur le PC une fois la signature validée ici.
+  </p>
+
   <p *ngIf="error" class="error">{{ error }}</p>
 
   <div class="pad">

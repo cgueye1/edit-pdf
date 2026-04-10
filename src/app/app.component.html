@@ -261,6 +261,27 @@
     </div>
   </main>
 
+  <!-- Choix du mode de signature : PC (pad complet) ou mobile (QR) -->
+  <div class="modal-overlay" *ngIf="showSignatureMethodModal" (click)="closeSignatureMethodModal()">
+    <div class="modal modal-signature-method" (click)="$event.stopPropagation()">
+      <h2>Comment souhaitez-vous signer ?</h2>
+      <p class="modal-signature-method-lead">Signez sur cet ordinateur (dessin, texte, image) ou sur votre téléphone via le QR code.</p>
+      <div class="signature-method-actions">
+        <button type="button" class="btn-signature-method primary" (click)="chooseSignatureOnWeb()">
+          <i class="fas fa-pen-fancy" aria-hidden="true"></i>
+          <span>Sur cet ordinateur</span>
+          <small>Dessiner, taper ou importer une image</small>
+        </button>
+        <button type="button" class="btn-signature-method secondary" (click)="chooseSignatureOnMobile()">
+          <i class="fas fa-mobile-screen-button" aria-hidden="true"></i>
+          <span>Sur le téléphone</span>
+          <small>Scanner le QR et signer sur mobile</small>
+        </button>
+      </div>
+      <button type="button" class="btn-signature-method-cancel" (click)="closeSignatureMethodModal()">Annuler</button>
+    </div>
+  </div>
+
   <!-- Panneau de signature -->
   <app-signature-pad *ngIf="showSignaturePad" (signatureSaved)="onSignatureSaved($event)"
     (closed)="onCloseSignaturePad()">

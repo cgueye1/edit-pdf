@@ -130,6 +130,8 @@ export class AppComponent implements OnInit {
 
   activeTool: string | null = null;
   showSignaturePad = false;
+  /** Choix : signer sur le PC (pad) ou sur mobile (QR). */
+  showSignatureMethodModal = false;
   pendingSignaturePosition: { x: number; y: number; page: number } | null = null;
   // ─── Signature mobile en live (PC ↔ mobile) ───────────────────────────────
   remoteSignMode = false;
@@ -812,8 +814,7 @@ export class AppComponent implements OnInit {
 
         case 'signature':
           this.pendingSignaturePosition = { x: event.x, y: event.y, page: event.page - 1 };
-          // Signature en live sur mobile (QR) + preview instantané sur PC
-          this.openRemoteSignatureModal();
+          this.showSignatureMethodModal = true;
           return;
 
         case 'date': {
@@ -1017,6 +1018,24 @@ export class AppComponent implements OnInit {
     }
   }
 
+  /** Fermer le choix sans action (Annuler). */
+  closeSignatureMethodModal(): void {
+    this.showSignatureMethodModal = false;
+    this.pendingSignaturePosition = null;
+  }
+
+  /** Signature manuscrite / texte / image sur cet ordinateur (comme avant). */
+  chooseSignatureOnWeb(): void {
+    this.showSignatureMethodModal = false;
+    this.showSignaturePad = true;
+  }
+
+  /** Signature sur téléphone : QR + flux temps réel vers ce PC. */
+  chooseSignatureOnMobile(): void {
+    this.showSignatureMethodModal = false;
+    this.openRemoteSignatureModal();
+  }
+
   openRemoteSignatureModal(): void {
     const sessionId = this.newSessionId();
     this.remoteSignSessionId = sessionId;
@@ -1088,6 +1107,8 @@ export class AppComponent implements OnInit {
     this.remoteConnected = false;
     this.remoteQrUrl = '';
     this.remoteSignSessionId = null;
+    /** Abandon (Fermer sans valider sur mobile) : annule l’emplacement cliqué. */
+    this.pendingSignaturePosition = null;
     this.realtimeSignature.disconnect();
   }
 
@@ -1118,8 +1139,8 @@ export class AppComponent implements OnInit {
         return;
       }
       const dataUrl = canvas.toDataURL('image/png');
-      this.closeRemoteSignatureModal();
       this.onSignatureSaved(dataUrl);
+      this.closeRemoteSignatureModal();
     });
   }
 
