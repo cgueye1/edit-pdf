@@ -251,7 +251,8 @@ export class PdfService {
       await this.drawFieldOnDoc(exportDoc, field);
     }
 
-    const pdfBytes = await exportDoc.save();
+    // useObjectStreams: false — meilleure compatibilité avec la chaîne PAdES côté API (@signpdf + placeholder-pdf-lib).
+    const pdfBytes = await exportDoc.save({ useObjectStreams: false });
     const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
     if (!preview || signed) {

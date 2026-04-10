@@ -1358,7 +1358,13 @@ export class AppComponent implements OnInit {
       return new Promise((resolve, reject) => {
         this.docsService
           .uploadFilledPdfForRequest(this.requestId, file, false, this.uploadToken, label, { fields: document.fields, currentPage: document.currentPage })
-          .subscribe({ next: () => resolve(), error: reject });
+          .subscribe({
+            next: (res) => {
+              this.notifyPkiUploadStatus(res);
+              resolve();
+            },
+            error: reject,
+          });
       });
     };
 
@@ -1396,6 +1402,17 @@ export class AppComponent implements OnInit {
     });
   }
 
+  /** Si l’API n’a pas pu appliquer la PAdES, le corps de réponse explique pourquoi (PKI off, PDF illisible, etc.). */
+  private notifyPkiUploadStatus(uploadResponse: unknown): void {
+    const r = uploadResponse as {
+      pkiDigitalSignatureApplied?: boolean;
+      pkiDigitalSignatureNotice?: string;
+    };
+    if (r?.pkiDigitalSignatureApplied === false && r?.pkiDigitalSignatureNotice?.trim()) {
+      this.notificationService.warning(r.pkiDigitalSignatureNotice);
+    }
+  }
+
   /**
    * Enregistre le document courant via POST/PUT /api/requests/{id}/upload-filled-pdf.
    * @param silent pas de toast succès
@@ -1419,7 +1436,8 @@ export class AppComponent implements OnInit {
             currentPage: this.currentDocument.currentPage,
           })
           .subscribe({
-          next: () => {
+          next: (res) => {
+            this.notifyPkiUploadStatus(res);
             this.requestHasExistingPdf = true;
             if (!silent) {
               this.notificationService.success(
