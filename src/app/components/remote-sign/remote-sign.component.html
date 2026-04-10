@@ -1,0 +1,26 @@
+<div class="remote-sign">
+  <div class="top">
+    <div class="title">Signature</div>
+    <div class="status" [class.ok]="connected" [class.ko]="!connected">
+      {{ connected ? 'Connecté' : 'Hors ligne' }}
+    </div>
+  </div>
+
+  <p *ngIf="error" class="error">{{ error }}</p>
+
+  <div class="pad">
+    <canvas
+      #canvas
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+    ></canvas>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn secondary" (click)="clear()">Effacer</button>
+    <button type="button" class="btn primary" (click)="validate()">Valider</button>
+  </div>
+</div>
+

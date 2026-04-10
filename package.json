@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:securelink": "ng serve --configuration=securelink",
     "build": "ng build",
     "build:securelink": "ng build --configuration production-securelink",
     "watch": "ng build --watch --configuration development",
@@ -28,6 +29,7 @@
     "pdfjs-dist": "^3.11.174",
     "rxjs": "~7.8.0",
     "signature_pad": "^5.1.3",
+    "socket.io-client": "^4.8.3",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.3"
   },

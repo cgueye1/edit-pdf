@@ -48,7 +48,7 @@
               "outputHashing": "all"
             },
             "production-securelink": {
-              "baseHref": "/pdf-editor/",
+              "baseHref": "/pdf/",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.prod.ts",
@@ -65,6 +65,18 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "development-securelink": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "baseHref": "/pdf/",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.prod.ts",
+                  "with": "src/environments/environment.securelink.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -77,6 +89,9 @@
             },
             "development": {
               "buildTarget": "pdf-editor-app:build:development"
+            },
+            "securelink": {
+              "buildTarget": "pdf-editor-app:build:development-securelink"
             }
           },
           "defaultConfiguration": "development"

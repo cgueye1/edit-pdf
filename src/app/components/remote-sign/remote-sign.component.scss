@@ -1,0 +1,82 @@
+.remote-sign {
+  min-height: 100vh;
+  padding: 16px;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.status {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.status.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.status.ko {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.error {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.pad {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  height: min(60vh, 420px);
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  padding: 14px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #0e3e5b;
+  color: white;
+}
+.btn.secondary {
+  background: white;
+  border: 2px solid #0e3e5b;
+  color: #0e3e5b;
+}
+

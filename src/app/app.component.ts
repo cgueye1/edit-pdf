@@ -33,6 +33,8 @@ import AES from 'crypto-js/aes';
 import enc from 'crypto-js/enc-utf8';
 import { DocsService } from './services/DocsService';
 import { environment } from '../environments/environment.prod';
+import { RemoteSignComponent } from './components/remote-sign/remote-sign.component';
+import { RealtimeSignatureService, SignatureStroke } from './services/realtime-signature.service';
 
 @Component({
   selector: 'app-root',
@@ -48,6 +50,7 @@ import { environment } from '../environments/environment.prod';
     PdfPreviewModalComponent,
     NotificationContainerComponent,
     OtpModalComponent,
+    RemoteSignComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -128,6 +131,20 @@ export class AppComponent implements OnInit {
   activeTool: string | null = null;
   showSignaturePad = false;
   pendingSignaturePosition: { x: number; y: number; page: number } | null = null;
+  // ─── Signature mobile en live (PC ↔ mobile) ───────────────────────────────
+  remoteSignMode = false;
+  remoteSignSessionId: string | null = null;
+  showRemoteSignModal = false;
+  remoteQrUrl = '';
+  remoteConnected = false;
+  remoteError = '';
+  private remotePreviewCtx: CanvasRenderingContext2D | null = null;
+
+  /** Landing /pdf/mobile-sign : tente le deeplink app puis redirection web (évite iframe / mauvais host sur le QR). */
+  isMobileSignLanding = false;
+
+  @ViewChild('remotePreviewCanvas', { static: false })
+  remotePreviewCanvasRef?: ElementRef<HTMLCanvasElement>;
   showSavedDocuments = false;
   selectedField: PDFField | null = null;
   textProperties = {
@@ -180,8 +197,12 @@ export class AppComponent implements OnInit {
     private storageService: StorageService,
     private notificationService: NotificationService,
     private docsService: DocsService,
+    private realtimeSignature: RealtimeSignatureService,
   ) {
     pdfjs.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
+    if (typeof location !== 'undefined') {
+      this.isMobileSignLanding = location.pathname.includes('mobile-sign');
+    }
   }
 
   // ─── Zoom ─────────────────────────────────────────────────────────────────
@@ -205,6 +226,13 @@ export class AppComponent implements OnInit {
     this.generateThumbnails();
   }
 
+
+  toolbarTools = [
+    { id: 'select', icon: 'fas fa-mouse-pointer', label: 'Curseur' },
+    { id: 'text',   icon: 'fas fa-font',           label: 'Texte' },
+    { id: 'sign',   icon: 'fas fa-signature',      label: 'Signature' },
+    { id: 'draw',   icon: 'fas fa-pen',            label: 'Dessin' },
+  ];
   rotateCurrentDocLeft(): void {
     const key = this.activeDocRotationKey();
     const next = ((this.currentViewerRotation - 90) % 360 + 360) % 360;
@@ -367,6 +395,11 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.isMobileSignLanding) {
+      this.runMobileSignDeepLinkThenWeb();
+      return;
+    }
+
     const winParams = this.getQueryParams();
     const applyParams = (routeParams: Record<string, string>) => {
       const p = (key: string) => routeParams[key] ?? winParams[key];
@@ -377,6 +410,15 @@ export class AppComponent implements OnInit {
         const normalized = ((Math.round(n / 90) * 90) % 360 + 360) % 360;
         return normalized;
       };
+      // ── Mode signature mobile : UI dédiée, sans charger l’éditeur PDF ───────
+      const remoteSign = p('remoteSign');
+      const remoteSession = p('session');
+      if (remoteSign === '1' && remoteSession) {
+        this.remoteSignMode = true;
+        this.remoteSignSessionId = decodeURIComponent(String(remoteSession));
+        return;
+      }
+
       const docsParam = p('docs');
       const directUrl = p('url');
       const encryptedParam = p('pdfurl');
@@ -770,7 +812,8 @@ export class AppComponent implements OnInit {
 
         case 'signature':
           this.pendingSignaturePosition = { x: event.x, y: event.y, page: event.page - 1 };
-          this.showSignaturePad = true;
+          // Signature en live sur mobile (QR) + preview instantané sur PC
+          this.openRemoteSignatureModal();
           return;
 
         case 'date': {
@@ -917,6 +960,167 @@ export class AppComponent implements OnInit {
     this.showSignaturePad = false;
     this.pendingSignaturePosition = null;
     this.notificationService.success('Signature ajoutée avec succès.');
+  }
+
+  // ─── Signature mobile en live (PC) ────────────────────────────────────────
+
+  private ensureRemotePreviewCanvasReady(): void {
+    const canvas = this.remotePreviewCanvasRef?.nativeElement;
+    if (!canvas) return;
+    canvas.width = canvas.offsetWidth * devicePixelRatio;
+    canvas.height = canvas.offsetHeight * devicePixelRatio;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    this.remotePreviewCtx = ctx;
+  }
+
+  private drawRemoteStroke(stroke: SignatureStroke): void {
+    const ctx = this.remotePreviewCtx;
+    const canvas = this.remotePreviewCanvasRef?.nativeElement;
+    if (!ctx || !canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    const pts = stroke?.points || [];
+    if (pts.length < 2) return;
+    ctx.strokeStyle = stroke.color || '#000000';
+    ctx.lineWidth = stroke.width || 2;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]!;
+      const b = pts[i]!;
+      ctx.beginPath();
+      ctx.moveTo(a.x * w, a.y * h);
+      ctx.lineTo(b.x * w, b.y * h);
+      ctx.stroke();
+    }
+  }
+
+  private clearRemotePreview(): void {
+    const canvas = this.remotePreviewCanvasRef?.nativeElement;
+    const ctx = this.remotePreviewCtx;
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  clearRemotePreviewUi(): void {
+    this.clearRemotePreview();
+  }
+
+  private newSessionId(): string {
+    try {
+      return (crypto as any).randomUUID();
+    } catch {
+      return `sig_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    }
+  }
+
+  openRemoteSignatureModal(): void {
+    const sessionId = this.newSessionId();
+    this.remoteSignSessionId = sessionId;
+    this.remoteError = '';
+    this.remoteConnected = false;
+    this.showRemoteSignModal = true;
+
+    const qrTarget = this.getRemoteSignatureQrTargetUrl(sessionId);
+    this.remoteQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrTarget)}`;
+
+    setTimeout(() => {
+      this.ensureRemotePreviewCanvasReady();
+      this.connectRemoteSocket(sessionId);
+    }, 0);
+  }
+
+  /**
+   * URL encodée dans le QR : page /mobile-sign qui ouvre l’app si schéma enregistré, sinon la signature web.
+   */
+  private getRemoteSignatureQrTargetUrl(sessionId: string): string {
+    const base = this.resolvePdfPublicBaseUrl();
+    return `${base}/mobile-sign?session=${encodeURIComponent(sessionId)}`;
+  }
+
+  /** Base publique de l’éditeur (env) ou dérivée de l’URL courante (hors segment mobile-sign). */
+  private resolvePdfPublicBaseUrl(): string {
+    const envBase = (environment as { pdfPublicBaseUrl?: string }).pdfPublicBaseUrl?.trim().replace(/\/$/, '');
+    if (envBase) return envBase;
+    try {
+      const path = window.location.pathname;
+      const idx = path.indexOf('/mobile-sign');
+      if (idx > 0) {
+        return `${window.location.origin}${path.slice(0, idx)}`.replace(/\/$/, '');
+      }
+      return `${window.location.origin}${path.replace(/\/mobile-sign\/?$/, '')}`.replace(/\/$/, '');
+    } catch {
+      return '';
+    }
+  }
+
+  /** Après scan QR : deeplink app puis fallback navigateur vers ?remoteSign=1&session=… */
+  private runMobileSignDeepLinkThenWeb(): void {
+    let session: string | null = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      session = params.get('session');
+    } catch (_) {}
+    const base = this.resolvePdfPublicBaseUrl();
+    if (!session) {
+      window.location.replace(`${base}/`);
+      return;
+    }
+    const webUrl = `${base}/?remoteSign=1&session=${encodeURIComponent(session)}`;
+    const deep = (environment as { mobileSignatureDeepLink?: string }).mobileSignatureDeepLink?.trim();
+    if (deep) {
+      const appUrl = `${deep.replace(/\/$/, '')}?remoteSign=1&session=${encodeURIComponent(session)}`;
+      window.location.href = appUrl;
+      setTimeout(() => {
+        window.location.replace(webUrl);
+      }, 900);
+    } else {
+      window.location.replace(webUrl);
+    }
+  }
+
+  closeRemoteSignatureModal(): void {
+    this.showRemoteSignModal = false;
+    this.remoteError = '';
+    this.remoteConnected = false;
+    this.remoteQrUrl = '';
+    this.remoteSignSessionId = null;
+    this.realtimeSignature.disconnect();
+  }
+
+  private connectRemoteSocket(sessionId: string): void {
+    const s = this.realtimeSignature.connect();
+    s.off('stroke');
+    s.off('clear');
+    s.off('done');
+    s.off('presence');
+    s.on('connect', () => {
+      s.emit('join', { sessionId, role: 'pc' }, () => {});
+      this.remoteConnected = true;
+    });
+    s.on('connect_error', () => {
+      this.remoteConnected = false;
+      this.remoteError = 'Connexion temps réel impossible.';
+    });
+    s.on('stroke', (payload: SignatureStroke) => {
+      this.drawRemoteStroke(payload);
+    });
+    s.on('clear', () => {
+      this.clearRemotePreview();
+    });
+    s.on('done', () => {
+      const canvas = this.remotePreviewCanvasRef?.nativeElement;
+      if (!canvas) {
+        this.closeRemoteSignatureModal();
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      this.closeRemoteSignatureModal();
+      this.onSignatureSaved(dataUrl);
+    });
   }
 
   // ─── Export ───────────────────────────────────────────────────────────────

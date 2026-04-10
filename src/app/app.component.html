@@ -1,4 +1,16 @@
-<div class="app-container">
+<div *ngIf="isMobileSignLanding" class="mobile-sign-redirect-splash" role="status" aria-live="polite">
+  <div class="mobile-sign-redirect-inner">
+    <i class="fas fa-mobile-screen-button" aria-hidden="true"></i>
+    <p>Ouverture de la signature…</p>
+</div>
+</div>
+
+<app-remote-sign
+  *ngIf="remoteSignMode && !isMobileSignLanding"
+  [remoteSession]="remoteSignSessionId"
+></app-remote-sign>
+
+<div class="app-container" *ngIf="!remoteSignMode && !isMobileSignLanding">
   <!-- En-tête avec toolbar -->
   <header class="app-header-wrapper">
 
@@ -253,6 +265,40 @@
   <app-signature-pad *ngIf="showSignaturePad" (signatureSaved)="onSignatureSaved($event)"
     (closed)="onCloseSignaturePad()">
   </app-signature-pad>
+
+  <!-- Modal signature mobile (QR + preview live) -->
+  <div class="modal-overlay modal-remote-sign-overlay" *ngIf="showRemoteSignModal" (click)="closeRemoteSignatureModal()">
+    <div class="modal modal-remote-sign" (click)="$event.stopPropagation()">
+      <div class="modal-remote-sign-header">
+        <div class="modal-remote-sign-icon" aria-hidden="true"><i class="fas fa-qrcode"></i></div>
+        <div>
+          <h2>Signature sur mobile</h2>
+          <p class="modal-remote-sign-lead">Scannez le QR avec l’appareil photo. Vous serez guidé vers la page de signature sur secure.innovimpact (ou l’app mobile si elle est installée).</p>
+        </div>
+      </div>
+      <div class="remote-grid">
+        <div class="remote-qr">
+          <div class="remote-qr-frame">
+            <img [src]="remoteQrUrl" alt="QR code pour ouvrir la signature sur mobile" width="240" height="240" />
+          </div>
+          <p class="remote-status" [class.ok]="remoteConnected" [class.ko]="!remoteConnected">
+            {{ remoteConnected ? 'Connecté' : 'En attente du téléphone…' }}
+          </p>
+          <p *ngIf="remoteError" class="remote-error">{{ remoteError }}</p>
+        </div>
+        <div class="remote-preview">
+          <div class="remote-preview-title">Aperçu en direct</div>
+          <div class="remote-preview-box">
+            <canvas #remotePreviewCanvas></canvas>
+          </div>
+          <div class="remote-actions">
+            <button type="button" class="btn-modifier" (click)="clearRemotePreviewUi()">Effacer</button>
+            <button type="button" class="btn-confirmer" (click)="closeRemoteSignatureModal()">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Panneau des documents sauvegardés -->
   <app-saved-documents [show]="showSavedDocuments" (closed)="onCloseSavedDocuments()"
