@@ -23,7 +23,12 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              { "glob": "**/*", "input": "node_modules/@fortawesome/fontawesome-free/webfonts", "output": "/webfonts/" }
+              { "glob": "**/*", "input": "node_modules/@fortawesome/fontawesome-free/webfonts", "output": "/webfonts/" },
+              {
+                "glob": "**/*",
+                "input": "public/.well-known",
+                "output": "/.well-known/"
+              }
             ],
             "styles": [
               "src/styles.css",
