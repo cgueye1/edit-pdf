@@ -1457,22 +1457,22 @@ export class AppComponent implements OnInit {
             currentPage: this.currentDocument.currentPage,
           })
           .subscribe({
-          next: (res) => {
-            this.notifyPkiUploadStatus(res);
-            this.requestHasExistingPdf = true;
-            if (!silent) {
-              this.notificationService.success(
-                thenClose ? 'PDF enregistré.' : 'Document enregistré.',
-              );
-            }
-            if (thenClose) this.notifyParentClose();
-          },
-          error: (err) => {
-            console.error(err);
-            if (!silent) this.notificationService.error(thenClose ? 'Erreur lors de l\'enregistrement du PDF.' : 'Erreur lors de l\'enregistrement.');
-            if (thenClose) this.notifyParentClose();
-          },
-        });
+            next: (res) => {
+              this.notifyPkiUploadStatus(res);
+              this.requestHasExistingPdf = true;
+              if (!silent) {
+                this.notificationService.success(
+                  thenClose ? 'PDF enregistré.' : 'Document enregistré.',
+                );
+              }
+              if (thenClose) this.notifyParentClose();
+            },
+            error: (err) => {
+              console.error(err);
+              if (!silent) this.notificationService.error(thenClose ? 'Erreur lors de l\'enregistrement du PDF.' : 'Erreur lors de l\'enregistrement.');
+              if (thenClose) this.notifyParentClose();
+            },
+          });
       })
       .catch((err) => {
         console.error(err);

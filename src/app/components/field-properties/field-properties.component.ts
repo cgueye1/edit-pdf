@@ -21,7 +21,7 @@ export class FieldPropertiesComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['field'] && this.field) {
-      this.editedField = { 
+      this.editedField = {
         ...this.field,
         validation: this.field.validation || {}
       };

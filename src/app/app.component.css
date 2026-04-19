@@ -93,7 +93,7 @@
     }
 
     strong {
-      color: #3182ce;
+      color: #90362E;
       font-weight: 700;
     }
   }
@@ -189,9 +189,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
   margin-bottom: 0;
 }
 
@@ -203,9 +205,9 @@
 }
 
 .control-btn {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #d9e3ee;
+  border-radius: 10px;
   width: 32px;
   height: 32px;
   display: flex;
@@ -213,12 +215,15 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: #4a5568;
+  color: #334155;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
 }
 
 .control-btn:hover:not(:disabled) {
-  background: #f7fafc;
-  border-color: #cbd5e0;
+  background: #eff6f7;
+  border-color: #23A3A6;
+  color: #0f766e;
+  transform: translateY(-1px);
 }
 
 .control-btn:disabled {
@@ -234,8 +239,8 @@
 .page-text,
 .zoom-text {
   font-size: 13px;
-  font-weight: 500;
-  color: #2d3748;
+  font-weight: 700;
+  color: #0f172a;
   min-width: 60px;
   text-align: center;
 }
@@ -247,23 +252,25 @@
 }
 
 .fit-btn {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #d9e3ee;
+  border-radius: 12px;
   padding: 6px 12px;
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  color: #4a5568;
+  color: #334155;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
 .fit-btn:hover {
-  background: #f7fafc;
-  border-color: #cbd5e0;
+  background: #eff6f7;
+  border-color: #23A3A6;
+  color: #0f766e;
 }
 
 .fit-btn svg {
@@ -278,7 +285,7 @@
   flex-direction: column;
   align-items: center;
   position: relative;
-  padding:32px
+  padding: 24px
 }
 
 /*.pdf-viewer-wrapper > app-pdf-viewer {*/
@@ -312,21 +319,21 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
     &:hover {
-      border-color: #3182ce;
-      color: #3182ce;
+      border-color: #90362E;
+      color: #90362E;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
     &.active {
-      background: #3182ce;
-      border-color: #3182ce;
+      background: #90362E;
+      border-color: #90362E;
       color: white;
-      box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+      box-shadow: 0 4px 12px rgba(144, 54, 46, 0.3);
 
       &:hover {
-        background: #2c5aa0;
-        border-color: #2c5aa0;
+        background: #7c2f28;
+        border-color: #7c2f28;
       }
     }
 
@@ -353,10 +360,11 @@
   align-items: center;
   justify-content: center;
   padding: 60px 40px;
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
   margin: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 20px;
+  border: 1px solid #e5edf5;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
   min-width: 0;
 }
 
@@ -395,10 +403,10 @@
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0f766e 0%, #23A3A6 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 14px 32px;
   display: flex;
   align-items: center;
@@ -407,11 +415,11 @@
   transition: all 0.3s ease;
   font-size: 15px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.24);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 16px 34px rgba(15, 118, 110, 0.3);
   }
 
   &:active {
@@ -452,8 +460,8 @@
 
 .file-upload-large {
   .btn-upload-large {
-    border: 2px dashed #cbd5e0;
-    border-radius: 10px;
+    border: 2px dashed #c5d6e6;
+    border-radius: 18px;
     padding: 48px 40px;
     display: flex;
     flex-direction: column;
@@ -461,20 +469,20 @@
     gap: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: #f7fafc;
+    background: linear-gradient(180deg, #f8fbfd 0%, #f4f8fb 100%);
     width: 100%;
     max-width: 400px;
 
     &:hover {
-      background: #edf2f7;
-      border-color: #3182ce;
+      background: #eef7f8;
+      border-color: #23A3A6;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
     }
 
     .fa-cloud-upload-alt {
       font-size: 48px;
-      color: #3182ce;
+      color: #0f766e;
     }
 
     span {
@@ -492,8 +500,8 @@
 
 /* Footer moderne */
 .app-footer {
-  background: white;
-  border-top: 1px solid #e1e8ed;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+  border-top: 1px solid #e5edf5;
   padding: 12px 24px;
   color: #718096;
 
@@ -532,7 +540,7 @@
 
     i {
       font-size: 12px;
-      color: #3182ce;
+      color: #90362E;
     }
   }
 }
@@ -564,13 +572,13 @@
 .thumbnails-sidebar {
   width: 180px;
   min-width: 180px;
-  background: white;
+  background: linear-gradient(180deg, #f8fbfd 0%, #f4f8fb 100%);
   border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   height: 100%;
   transition: all 0.3s ease;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+  box-shadow: 8px 0 28px rgba(15, 23, 42, 0.06);
   position: relative;
   z-index: 900;
   overflow: hidden;
@@ -595,32 +603,38 @@
 
 /* Barre du haut fixe */
 .sidebar-top-bar {
-  height: 44px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  border-bottom: 1px solid #e9ecef;
-  background: #f8f9fa;
+  padding: 0 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
   flex-shrink: 0;
 
   .close-btn, .menu-btn {
-    background: none;
-    border: none;
+    background: #ffffff;
+    border: 1px solid #dce6f0;
+    border-radius: 10px;
     cursor: pointer;
-    padding: 8px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
     color: #6c757d;
-    transition: color 0.2s;
+    transition: all 0.2s;
 
     &:hover {
-      color: #495057;
+      color: #0f766e;
+      border-color: #23A3A6;
+      background: #eff6f7;
     }
   }
 
   .sidebar-title {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: #212529;
+    font-weight: 700;
+    color: #0f172a;
     margin: 0;
   }
 }
@@ -665,31 +679,45 @@
 .thumbnails-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .thumbnail-item {
   cursor: pointer;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.22s ease;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid transparent;
 
   &:hover {
-    transform: scale(1.03);
+    transform: translateY(-2px);
+    border-color: #d8e4ef;
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
   }
 
   &.active {
+    background: linear-gradient(180deg, #f0fbfb 0%, #eef8f8 100%);
+    border-color: #9dd8d9;
+
     .thumbnail-preview {
-      border: 2px solid #0d6efd;
-      box-shadow: 0 0 0 4px rgba(13,110,253,0.2);
+      border: 1px solid #23A3A6;
+      box-shadow: 0 0 0 4px rgba(35, 163, 166, 0.14), 0 14px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    .page-number {
+      color: #0f766e;
+      font-weight: 700;
     }
   }
 
   .thumbnail-preview {
     background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border: 1px solid #dde7f0;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
   }
 
   .thumbnail-canvas {
@@ -699,9 +727,10 @@
   }
 
   .page-number {
-    margin-top: 6px;
-    font-size: 0.85rem;
-    color: #6c757d;
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
   }
 }
 
@@ -719,19 +748,19 @@
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  background: #3182ce;
+  background: linear-gradient(135deg, #0f766e 0%, #23A3A6 100%);
   color: white;
   border: none;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 14px 14px 0;
   padding: 12px 8px;
   cursor: pointer;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.28);
   z-index: 1000;
   transition: all 0.3s ease;
 }
 
 .sidebar-toggle-btn:hover {
-  background: #2c5aa0;
+  background: linear-gradient(135deg, #115e59 0%, #1f9295 100%);
   padding-right: 12px;
 }
 
@@ -1466,9 +1495,9 @@ app-pdf-toolbar {
    HEADER WRAPPER
    ============================================ */
 .app-header-wrapper {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
   border-bottom: 1px solid #e6edf3;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 /* ============================================
@@ -1483,10 +1512,11 @@ app-pdf-toolbar {
 .header-logo-wrap {
   display: flex;
   align-items: center;
+  padding: 12px 20px 8px 20px;
 }
 
 .header-logo {
-  height: 36px;
+  height: 38px;
   width: auto;
   object-fit: contain;
 }
@@ -1498,19 +1528,19 @@ app-pdf-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px 12px 20px;
-  gap: 14px;
+  padding: 12px 20px 14px 20px;
+  gap: 16px;
   border-top: 1px solid #f1f5f9;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,251,253,0.98) 100%);
 }
 
 /* Bouton retour vert */
 .pdf-context-back {
-  width: 36px;
-  height: 36px;
-  background: #f0fdfa;
-  border: 1px solid #99f6e4;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(180deg, #f2fbfb 0%, #e8f7f7 100%);
+  border: 1px solid #b6e4e5;
+  border-radius: 14px;
   color: #0f766e;
   font-size: 14px;
   cursor: pointer;
@@ -1519,11 +1549,13 @@ app-pdf-toolbar {
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.08);
 }
 .pdf-context-back:hover {
-  background: #ccfbf1;
-  border-color: #5eead4;
+  background: #dbf5f5;
+  border-color: #7fd4d5;
   color: #115e59;
+  transform: translateY(-1px);
 }
 
 /* Titre + Sous-titre */
@@ -1531,7 +1563,7 @@ app-pdf-toolbar {
   display: flex;
   align-items: center;
   flex: 1;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
@@ -1539,14 +1571,15 @@ app-pdf-toolbar {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  gap: 2px;
 }
 
 .pdf-context-title {
   display: block;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f172a;
-  line-height: 1.3;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1555,7 +1588,7 @@ app-pdf-toolbar {
 .pdf-context-subtitle {
   display: block;
   font-size: 12px;
-  color: #64748b;
+  color: #6b7f95;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -1568,31 +1601,35 @@ app-pdf-toolbar {
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .document-name-btn {
-  background: none;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 6px 12px;
+  background: rgba(255,255,255,0.86);
+  border: 1px solid #d8e4ef;
+  border-radius: 12px;
+  padding: 8px 14px;
   font-size: 13px;
-  color: #333;
+  color: #1e293b;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.15s;
+  transition: all 0.2s;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
 }
 .document-name-btn:hover {
-  background: #f5f5f5;
+  background: #f8fbfd;
+  border-color: #b8ccdd;
 }
 
 .document-stats {
   font-size: 13px;
-  color: #888;
+  color: #64748b;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  font-weight: 600;
 }
 
 /* Bouton Suivant / Terminé */
@@ -1602,11 +1639,11 @@ app-pdf-toolbar {
 }
 
 .btn-suivant-terminer {
-  background: #23A3A6;
+  background: linear-gradient(135deg, #0f766e 0%, #23A3A6 100%);
   color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 11px 20px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -1614,19 +1651,20 @@ app-pdf-toolbar {
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 6px 14px rgba(35, 163, 166, 0.24);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.24);
   white-space: nowrap;
 }
 .btn-suivant-terminer:hover {
-  background: #1f9295;
+  background: linear-gradient(135deg, #115e59 0%, #1f9295 100%);
+  transform: translateY(-1px);
 }
 
 .btn-upload {
-  background: #23A3A6;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #f6fbfd 100%);
+  color: #0f766e;
+  border: 1px solid #cfe4e8;
+  border-radius: 14px;
+  padding: 11px 18px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -1634,10 +1672,13 @@ app-pdf-toolbar {
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 6px 14px rgba(35, 163, 166, 0.24);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
 }
 .btn-upload:hover {
-  background: #1f9295;
+  background: #eff8f8;
+  border-color: #8cd1d2;
+  color: #115e59;
+  transform: translateY(-1px);
 }
 
 /* ============================================
@@ -1645,35 +1686,315 @@ app-pdf-toolbar {
    ============================================ */
 .pdf-doc-tabs {
   display: flex;
-  padding: 0 20px 8px 20px;
+  padding: 0 20px 10px 20px;
   gap: 8px;
-  border-top: 1px solid #f1f5f9;
-  background: #fff;
+  border-top: 1px solid #edf3f8;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
   overflow-x: auto;
   scrollbar-width: none;
 }
 
 .pdf-doc-tab {
   padding: 8px 14px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  border: 1px solid #dce6f0;
+  background: rgba(255,255,255,0.9);
+  color: #526375;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
   border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
 }
 
 .pdf-doc-tab.active {
-  background: #23A3A6;
-  border-color: #23A3A6;
+  background: linear-gradient(135deg, #0f766e 0%, #23A3A6 100%);
+  border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 10px rgba(35, 163, 166, 0.22);
+  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.22);
 }
 
 .pdf-doc-tab:not(.active):hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: #f8fbfd;
+  border-color: #b8ccdd;
+  color: #0f172a;
+}
+
+/* ============================================
+   HEADER COMPACT MODE (multi-docs / text mode)
+   ============================================ */
+.app-header-wrapper.compact-header .header-logo {
+  height: 30px;
+}
+
+.app-header-wrapper.compact-header .header-logo-wrap {
+  padding: 6px 16px 4px 16px;
+}
+
+.app-header-wrapper.compact-header .app-header-top {
+  padding: 8px 16px;
+  gap: 10px;
+}
+
+.app-header-wrapper.compact-header .pdf-context-back {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.app-header-wrapper.compact-header .pdf-context-title {
+  font-size: 15px;
+}
+
+.app-header-wrapper.compact-header .btn-suivant-terminer,
+.app-header-wrapper.compact-header .btn-upload {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
+.app-header-wrapper.compact-header .pdf-doc-tabs {
+  padding: 0 16px 6px 16px;
+  gap: 6px;
+}
+
+.app-header-wrapper.compact-header .pdf-doc-tab {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.app-header-wrapper.text-mode .pdf-context-subtitle {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .app-header-wrapper.compact-header .header-logo {
+    height: 26px;
+  }
+
+  .app-header-wrapper.compact-header .header-logo-wrap,
+  .app-header-wrapper.compact-header .app-header-top {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .app-header-wrapper.compact-header .btn-suivant-terminer,
+  .app-header-wrapper.compact-header .btn-upload {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .app-header-wrapper.compact-header .pdf-doc-tabs {
+    padding: 0 12px 5px 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header-wrapper .header-logo-wrap {
+    display: none;
+  }
+
+  .app-header-wrapper .app-header-top {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .app-header-wrapper .pdf-context-title {
+    font-size: 14px;
+  }
+
+  .app-header-wrapper .btn-suivant-terminer,
+  .app-header-wrapper .btn-upload {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .app-header-wrapper .pdf-doc-tabs {
+    padding: 0 10px 4px 10px;
+  }
+
+  .app-header-wrapper .pdf-doc-tab {
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+}
+
+/* ============================================
+   BRAND ACCENT OVERRIDE
+   ============================================ */
+.app-header-wrapper .pdf-context-back {
+  color: #90362E;
+}
+
+.app-header-wrapper .pdf-context-back:hover {
+  color: #7c2f28;
+  border-color: #c98f89;
+}
+
+.app-header-wrapper .btn-suivant-terminer,
+.sidebar-toggle-btn,
+.pdf-doc-tab.active {
+  background: linear-gradient(135deg, #90362E 0%, #a5483f 100%);
+}
+
+.app-header-wrapper .btn-suivant-terminer:hover,
+.sidebar-toggle-btn:hover {
+  background: linear-gradient(135deg, #7c2f28 0%, #8e3b33 100%);
+}
+
+.app-header-wrapper .btn-upload {
+  color: #90362E;
+  border-color: #d9a5a0;
+}
+
+.app-header-wrapper .btn-upload:hover,
+.pdf-doc-tab:not(.active):hover,
+.control-btn:hover:not(:disabled),
+.fit-btn:hover {
+  color: #7c2f28;
+  border-color: #c98f89;
+}
+
+.thumbnail-item.active {
+  border-color: #d9a5a0;
+}
+
+.thumbnail-item.active .thumbnail-preview {
+  border: 1px solid #90362E;
+  box-shadow: 0 0 0 4px rgba(144, 54, 46, 0.14), 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.thumbnail-item.active .page-number,
+.sidebar-top-bar .close-btn:hover,
+.sidebar-top-bar .menu-btn:hover {
+  color: #90362E;
+}
+
+/* ============================================
+   HEADER COMPACT — paddings réduits
+   Objectif : gagner ~40px de hauteur sur la zone PDF
+   ============================================ */
+
+.header-logo-wrap {
+  padding: 6px 16px 4px 16px !important;
+}
+
+.header-logo {
+  height: 28px !important;
+}
+
+.app-header-top {
+  padding: 6px 16px 6px 16px !important;
+  gap: 12px !important;
+  min-height: unset !important;
+}
+
+.pdf-context-back {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+}
+
+.pdf-context-title {
+  font-size: 15px !important;
+}
+
+.pdf-context-subtitle {
+  font-size: 11px !important;
+}
+
+.btn-suivant-terminer,
+.btn-upload {
+  padding: 7px 14px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+}
+
+.pdf-doc-tabs {
+  padding: 0 16px 6px 16px !important;
+  gap: 5px !important;
+}
+
+.pdf-doc-tab {
+  padding: 5px 12px !important;
+  font-size: 12px !important;
+}
+
+app-pdf-toolbar {
+  display: block !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #eef2f7 !important;
+}
+
+/* Compression supplémentaire */
+.app-header-wrapper {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+.header-logo-wrap {
+  padding: 4px 12px 2px 12px !important;
+}
+
+.header-logo {
+  height: 24px !important;
+}
+
+.app-header-top {
+  padding: 4px 12px 4px 12px !important;
+  gap: 10px !important;
+}
+
+.pdf-context-titles {
+  gap: 10px !important;
+}
+
+.pdf-context-back {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.pdf-context-text {
+  gap: 0 !important;
+}
+
+.pdf-context-title {
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+}
+
+.pdf-context-subtitle {
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+}
+
+.document-name-btn {
+  padding: 6px 10px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+}
+
+.document-stats {
+  font-size: 12px !important;
+}
+
+.btn-suivant-terminer,
+.btn-upload {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: 9px !important;
+  gap: 6px !important;
+}
+
+.pdf-doc-tabs {
+  padding: 0 12px 4px 12px !important;
+  gap: 4px !important;
+}
+
+.pdf-doc-tab {
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  box-shadow: none !important;
 }

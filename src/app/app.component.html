@@ -2,7 +2,7 @@
   <div class="mobile-sign-redirect-inner">
     <i class="fas fa-mobile-screen-button" aria-hidden="true"></i>
     <p>Ouverture de la signature…</p>
-</div>
+  </div>
 </div>
 
 <app-remote-sign
@@ -16,7 +16,7 @@
 
     <!-- LIGNE 1 : Logo -->
     <div class="header-logo-wrap">
-      <img src="assets/logo.jpg" alt="SecureLink" class="header-logo" />
+      <img src="assets/logov.png" alt="SecureLink" class="header-logo" />
     </div>
 
     <!-- LIGNE 2 : Retour + Titre/Sous-titre + Bouton Suivant -->
@@ -213,15 +213,15 @@
         </div>
         <div style="position: relative;">
           <app-pdf-viewer [pdfUrl]="pdfUrl" [pdfData]="pdfData" [currentPage]="currentDocument.currentPage" [fields]="currentDocument.fields"
-            [forceRotation]="currentViewerRotation"
-            [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
-            [drawingOptions]="drawingOptions"
-            (pageClick)="onPageClick($event)"
-            (fieldAdded)="onFieldUpdated($event)" (fieldUpdated)="onFieldUpdated($event)"
-            (fieldSelected)="onFieldSelected($event)" (fieldTextEdit)="onFieldTextEdit($event)"
-            (fieldDeleted)="onFieldDeleted($event)" (pageRendered)="onPageRendered($event)"
-            (drawingComplete)="onDrawingComplete($event)" (drawingCancelled)="onDrawingCancelled()"
-            (drawingOptionsChange)="onDrawingOptionsChange($any($event))">
+                          [forceRotation]="currentViewerRotation"
+                          [scale]="scale" [activeTool]="activeTool" [isDrawingMode]="isDrawingMode" [drawingTool]="drawingTool"
+                          [drawingOptions]="drawingOptions"
+                          (pageClick)="onPageClick($event)"
+                          (fieldAdded)="onFieldUpdated($event)" (fieldUpdated)="onFieldUpdated($event)"
+                          (fieldSelected)="onFieldSelected($event)" (fieldTextEdit)="onFieldTextEdit($event)"
+                          (fieldDeleted)="onFieldDeleted($event)" (pageRendered)="onPageRendered($event)"
+                          (drawingComplete)="onDrawingComplete($event)" (drawingCancelled)="onDrawingCancelled()"
+                          (drawingOptionsChange)="onDrawingOptionsChange($any($event))">
           </app-pdf-viewer>
         </div>
       </div>
@@ -284,7 +284,7 @@
 
   <!-- Panneau de signature -->
   <app-signature-pad *ngIf="showSignaturePad" (signatureSaved)="onSignatureSaved($event)"
-    (closed)="onCloseSignaturePad()">
+                     (closed)="onCloseSignaturePad()">
   </app-signature-pad>
 
   <!-- Modal signature mobile (QR + preview live) -->
@@ -323,7 +323,7 @@
 
   <!-- Panneau des documents sauvegardés -->
   <app-saved-documents [show]="showSavedDocuments" (closed)="onCloseSavedDocuments()"
-    (documentSelected)="loadSavedDocument($event)">
+                       (documentSelected)="loadSavedDocument($event)">
   </app-saved-documents>
 
   <!-- Modal d'informations PDF -->
