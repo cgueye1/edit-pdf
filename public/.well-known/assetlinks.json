@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.wakana.secureforms",
+      "package_name": "com.innovimpactafrica.quickforms",
       "sha256_cert_fingerprints": [
         "84:EA:F0:89:EC:86:BE:B0:7D:FD:4B:8F:A3:C4:9C:B2:A4:7C:9B:0B:91:43:9A:11:22:67:43:72:27:79:8E:9B",
         "03:F5:6D:EB:B0:51:4B:95:8A:E4:CF:1C:9E:A0:84:F2:04:A6:CE:34:5C:73:A2:1C:C6:0C:70:DB:A6:54:47:D7"
