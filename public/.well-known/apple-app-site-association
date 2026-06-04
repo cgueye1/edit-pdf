@@ -3,8 +3,10 @@
     "apps": [],
     "details": [
       {
-        "appID": "YOUR_APPLE_TEAM_ID.com.wakana.secureforms",
-        "paths": ["/kyc", "/kyc/*"]
+        "appID": "NB2C96GSCW.com.innovimpactafrica.quickforms",
+        "paths": [
+          "/*"
+        ]
       }
     ]
   }
