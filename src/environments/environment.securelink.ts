@@ -21,5 +21,5 @@ export const environment = {
    * Ex. innovimpact://secure-pdf/signature — doit correspondre à l’enregistrement natif de l’app.
    * Chaîne vide = pas de tentative d’ouverture d’app, uniquement la page web.
    */
-  mobileSignatureDeepLink: 'innovimpact://secure-pdf/signature',
+  mobileSignatureDeepLink: 'secureforms://sign',
 };

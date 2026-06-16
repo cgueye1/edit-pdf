@@ -1091,7 +1091,7 @@ export class AppComponent implements OnInit {
     const webUrl = `${base}/?remoteSign=1&session=${encodeURIComponent(session)}`;
     const deep = (environment as { mobileSignatureDeepLink?: string }).mobileSignatureDeepLink?.trim();
     if (deep) {
-      const appUrl = `${deep.replace(/\/$/, '')}?remoteSign=1&session=${encodeURIComponent(session)}`;
+      const appUrl = `${deep.replace(/\/$/, '')}?session=${encodeURIComponent(session)}`;
       window.location.href = appUrl;
       setTimeout(() => {
         window.location.replace(webUrl);

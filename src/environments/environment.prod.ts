@@ -8,6 +8,6 @@ export const environment = {
   useSecureLink: true,
   /** Renseigné dans environment.securelink (build production-securelink). Vide = URL du navigateur pour le QR en local. */
   pdfPublicBaseUrl: '',
-  mobileSignatureDeepLink: '',
+  mobileSignatureDeepLink: 'secureforms://sign',
 };
 
